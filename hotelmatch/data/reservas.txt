@@ -1,0 +1,3 @@
+id=1|hotel=Salar de Uyuni Lodge|ciudad=Potosí, Bolivia|fecha=14 Oct, 2024|huespedes=2 Adultos|habitacion=Suite Ejecutiva|precio=180|estado=Confirmada
+id=2|hotel=Palacio Real de Madrid|ciudad=Madrid, España|fecha=02 Sep, 2024|huespedes=2 Adultos|habitacion=Palace Deluxe|precio=320|estado=Finalizado
+id=3|hotel=Casa del Virrey|ciudad=Potosí, Bolivia|fecha=20 Nov, 2024|huespedes=1 Adulto|habitacion=Habitación Colonial|precio=120|estado=Confirmada

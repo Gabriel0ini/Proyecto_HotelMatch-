@@ -1,0 +1,4 @@
+usuario123|abc123|Nombre de tu mascota|firulais
+Roberto123|abc123|deporte favorito|futbol
+Adrian123|12345|pais|bolivia
+roberth123|abc123|Color Favorito|rojo

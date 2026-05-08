@@ -1,0 +1,3 @@
+id=1|nombre=Potosí|tipo=Patrimonio Histórico|descripcion=La ciudad imperial cargada de historia colonial y minera. Un refugio de arquitectura barroca única en el mundo.|precio=120|rating=4.8|ciudad=Potosí, Bolivia
+id=2|nombre=Cochabamba|tipo=Patrimonio Histórico|descripcion=La ciudad de la eterna primavera. Gastronomía única, mercados coloridos y acceso al Chapare tropical.|precio=120|rating=4.8|ciudad=Cochabamba, Bolivia
+id=3|nombre=Santa Cruz|tipo=Metrópolis Tropical|descripcion=Donde la modernidad se encuentra con la selva. Vida nocturna vibrante y acceso a los parques naturales.|precio=95|rating=4.7|ciudad=Santa Cruz, Bolivia
