@@ -177,3 +177,38 @@ def guardar_usuario(datos_usuario):
     with open(_ruta("usuario.txt"), "w", encoding="utf-8") as archivo:
         for clave, valor in datos_usuario.items():
             archivo.write(f"{clave}={valor}\n")
+
+def leer_hoteles():
+    """Lee todos los hoteles del archivo .txt."""
+    hoteles = []
+    ruta = _ruta("hoteles.txt")
+    if not os.path.exists(ruta):
+        return hoteles
+    with open(ruta, "r", encoding="utf-8") as archivo:
+        for linea in archivo:
+            linea = linea.strip()
+            if linea:
+                hoteles.append(_linea_a_dict(linea))
+    return hoteles
+
+def guardar_hoteles(hoteles):
+    """Sobreescribe el archivo con la lista completa."""
+    os.makedirs(CARPETA_DATOS, exist_ok=True)
+    with open(_ruta("hoteles.txt"), "w", encoding="utf-8") as archivo:
+        for hotel in hoteles:
+            archivo.write(_dict_a_linea(hotel) + "\n")
+
+def agregar_hotel(datos_hotel):
+    """Agrega un hotel nuevo con ID automático."""
+    hoteles = leer_hoteles()
+    ids = [int(h.get("id", 0)) for h in hoteles]
+    datos_hotel["id"] = str(max(ids) + 1) if ids else "1"
+    hoteles.append(datos_hotel)
+    guardar_hoteles(hoteles)
+    return datos_hotel["id"]
+
+def eliminar_hotel(id_hotel):
+    """Elimina el hotel con el ID dado."""
+    hoteles = leer_hoteles()
+    hoteles = [h for h in hoteles if h.get("id") != str(id_hotel)]
+    guardar_hoteles(hoteles)

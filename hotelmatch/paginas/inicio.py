@@ -138,52 +138,74 @@ class PaginaInicio(tk.Frame):
             "GESTIONAR ESTANCIA",
             lambda: self.app.navegar("mis_estancias")  
         ).pack(anchor="w")
-
     def _seccion_sugerencias(self, padre):
-        """Fila horizontal de cards de destinos sugeridos."""
-
         titulo_seccion(
             padre,
-            "SUGERENCIAS PARA TU PRÓXIMO VIAJE EN BOLIVIA"
+            "HOTELES DISPONIBLES"
         ).pack(anchor="w", pady=(0, 10))
+
+        from datos import leer_hoteles
+        hoteles = [h for h in leer_hoteles() if h.get("estado", "").lower() == "activo"]
+
+        if not hoteles:
+            tk.Label(
+                padre,
+                text="No hay hoteles disponibles por el momento.",
+                bg=C["main_bg"], fg=C["texto_mid"],
+                font=("Segoe UI", 9)
+            ).pack(anchor="w")
+            return
 
         contenedor = tk.Frame(padre, bg=C["main_bg"])
         contenedor.pack(anchor="w")
 
-        destinos = [
-            ("Salar de Uyuni",  "El espejo más grande del mundo.", "🏔"),
-            ("Lago Titicaca",   "Cuna de la civilización Inca.",   "🌊"),
-            ("Valle de la Luna","Paisaje lunar único en Bolivia.", "🌙"),
-        ]
+        for hotel in hoteles:
+            self._card_hotel(contenedor, hotel)
 
-        for nombre, descripcion, emoji in destinos:
-            self._card_sugerencia(contenedor, nombre, descripcion, emoji)
-
-    def _card_sugerencia(self, padre, nombre, descripcion, emoji):
-        """Mini-card de destino sugerido."""
-
+    def _card_hotel(self, padre, hotel):
         tarjeta = tk.Frame(
             padre,
             bg=C["blanco"],
             highlightbackground=C["borde"],
             highlightthickness=1
         )
-        tarjeta.pack(side="left", padx=(0, 12))
+        tarjeta.pack(side="left", padx=(0, 14))
 
-        imagen = tk.Canvas(tarjeta, width=148, height=88,
+        # Banner superior con emoji
+        banner = tk.Canvas(tarjeta, width=180, height=90,
                            bg="#dde8f0", highlightthickness=0)
-        imagen.pack()
-        imagen.create_text(74, 44, text=emoji,
-                           font=("Segoe UI", 28))
+        banner.pack()
+        banner.create_text(90, 45, text=hotel.get("emoji", "🏨"),
+                           font=("Segoe UI", 30))
 
-        
         info = tk.Frame(tarjeta, bg=C["blanco"])
-        info.pack(fill="x", padx=10, pady=(6, 10))
+        info.pack(fill="x", padx=12, pady=(8, 12))
 
-        tk.Label(info, text=nombre, bg=C["blanco"],
-                 fg=C["texto_dark"],
-                 font=("Segoe UI", 9, "bold")).pack(anchor="w")
-        tk.Label(info, text=descripcion, bg=C["blanco"],
-                 fg=C["texto_mid"],
-                 font=("Segoe UI", 8),
-                 wraplength=130).pack(anchor="w", pady=(2, 0))
+        # Tipo de hotel
+        tk.Label(info, text=hotel.get("tipo", "").upper(),
+                 bg=C["naranja_suave"], fg=C["naranja"],
+                 font=("Segoe UI", 7, "bold"),
+                 padx=6, pady=2).pack(anchor="w")
+
+        # Nombre
+        tk.Label(info, text=hotel.get("nombre", ""),
+                 bg=C["blanco"], fg=C["texto_dark"],
+                 font=("Segoe UI", 10, "bold"),
+                 wraplength=160).pack(anchor="w", pady=(4, 0))
+
+        # Ciudad
+        tk.Label(info, text=f"📍 {hotel.get('ciudad', '')}",
+                 bg=C["blanco"], fg=C["texto_mid"],
+                 font=("Segoe UI", 8)).pack(anchor="w", pady=(2, 4))
+
+        # Fila rating + habitaciones
+        fila = tk.Frame(info, bg=C["blanco"])
+        fila.pack(anchor="w")
+
+        tk.Label(fila, text=f"⭐ {hotel.get('rating', '-')}" ,
+                 bg=C["blanco"], fg=C["texto_dark"],
+                 font=("Segoe UI", 8, "bold")).pack(side="left", padx=(0, 10))
+
+        tk.Label(fila, text=f"🛏 {hotel.get('habitaciones', '-')} hab.",
+                 bg=C["blanco"], fg=C["texto_mid"],
+                 font=("Segoe UI", 8)).pack(side="left")

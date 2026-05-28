@@ -1,0 +1,3 @@
+id=1|nombre=Los Tajibos|ciudad=Santa Cruz, Bolivia|habitaciones=208|rating=4.9|estado=Activo|tipo=LUXURY SEGMENT|descripcion=Hotel de lujo en el corazón de Santa Cruz.|emoji=🏨
+id=2|nombre=Gran Hotel Paris|ciudad=La Paz, Bolivia|habitaciones=16|rating=4.7|estado=Activo|tipo=URBAN CONCEPT|descripcion=Encanto histórico en pleno centro paceño.|emoji=🏛
+id=3|nombre=Gran Hotel Cochabamba|ciudad=Cochabamba, Bolivia|habitaciones=130|rating=4.2|estado=Activo|tipo=WINTER PEAK|descripcion=Comodidad y tradición en la ciudad jardín.|emoji=🌿
