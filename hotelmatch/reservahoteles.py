@@ -30,7 +30,8 @@ def obtener_iniciales(nombre_usuario):
 class HotelMatchApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self._pagina_actual = None     
+        self._pagina_actual = None
+        self.usuario_actual = USUARIO_ACTUAL
    
         self._paginas = {
             "inicio":         PaginaInicio,
@@ -110,7 +111,7 @@ class HotelMatchApp(tk.Tk):
         tk.Label(frame_logo, text=" MATCH",  bg=C["sidebar_bg"],
                  fg=C["blanco"],  font=("Segoe UI", 12, "bold")).pack(side="left")
 
-        tk.Label(self.sidebar, text=f"USUARIO({USUARIO_ACTUAL.upper()})",
+        tk.Label(self.sidebar, text=f"USUARIO({self.usuario_actual.upper()})",
                  bg=C["sidebar_bg"], fg="#555577",
                  font=("Segoe UI", 7)).pack(anchor="w", padx=14)
 
