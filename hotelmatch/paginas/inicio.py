@@ -201,6 +201,12 @@ class PaginaInicio(tk.Frame):
         # Fila rating + habitaciones
         fila = tk.Frame(info, bg=C["blanco"])
         fila.pack(anchor="w")
+        boton_naranja(
+            info,
+            "RESERVAR",
+            lambda h=hotel: self._abrir_reserva(h),
+            ancho=14
+        ).pack(anchor="w", pady=(8, 0))
 
         tk.Label(fila, text=f"⭐ {hotel.get('rating', '-')}" ,
                  bg=C["blanco"], fg=C["texto_dark"],
@@ -209,3 +215,29 @@ class PaginaInicio(tk.Frame):
         tk.Label(fila, text=f"🛏 {hotel.get('habitaciones', '-')} hab.",
                  bg=C["blanco"], fg=C["texto_mid"],
                  font=("Segoe UI", 8)).pack(side="left")
+    
+    def _abrir_reserva(self, hotel):
+        from tkinter import Toplevel, messagebox
+        from paginas.mis_estancias import FormularioReserva
+
+        if hotel.get("estado", "").lower() != "activo":
+            messagebox.showwarning(
+                "No disponible",
+                f"{hotel.get('nombre')} no está disponible para reservas."
+            )
+            return
+
+        ventana = Toplevel(self)
+        ventana.title("Nueva Reserva")
+        ventana.geometry("420x480")
+        ventana.resizable(False, False)
+        ventana.configure(bg=C["main_bg"])
+        ventana.transient(self.app)
+        ventana.grab_set()
+
+        FormularioReserva(
+            ventana,
+            self.app,
+            lambda: None,   # no necesita refrescar inicio
+            hotel_prellenado=hotel
+    )
