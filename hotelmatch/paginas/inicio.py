@@ -53,10 +53,10 @@ class PaginaInicio(tk.Frame):
 
 
     def _seccion_saludo(self, padre):
-        """¡Hola de nuevo, Alejandro! + subtítulo."""
+        """¡Hola de nuevo, {self.app.usuario_actual}! + subtítulo."""
         tk.Label(
             padre,
-            text="¡Hola de nuevo, Alejandro!",
+            text=f"¡Hola de nuevo, {self.app.usuario_actual}!",
             bg=C["main_bg"],
             fg=C["texto_dark"],
             font=("Segoe UI", 22, "bold")

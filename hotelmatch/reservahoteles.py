@@ -1,3 +1,7 @@
+import sys
+import tkinter as tk
+from colores import C
+from widgets import separador, boton_naranja
 
 import tkinter as tk
 from colores import C
@@ -8,11 +12,26 @@ from paginas.mis_estancias  import PaginaMisEstancias
 from paginas.favoritos      import PaginaFavoritos
 from paginas.configuracion  import PaginaConfiguracion
 
+USUARIO_ACTUAL = sys.argv[1] if len(sys.argv) > 1 else "Usuario"
+
+
+def obtener_iniciales(nombre_usuario):
+    nombre_usuario = nombre_usuario.strip()
+    if not nombre_usuario:
+        return "U"
+
+    partes = nombre_usuario.split()
+    if len(partes) == 1:
+        return partes[0][0].upper()
+
+    return (partes[0][0] + partes[-1][0]).upper()
+
 
 class HotelMatchApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self._pagina_actual = None     
+        self._pagina_actual = None
+        self.usuario_actual = USUARIO_ACTUAL
    
         self._paginas = {
             "inicio":         PaginaInicio,
@@ -92,7 +111,7 @@ class HotelMatchApp(tk.Tk):
         tk.Label(frame_logo, text=" MATCH",  bg=C["sidebar_bg"],
                  fg=C["blanco"],  font=("Segoe UI", 12, "bold")).pack(side="left")
 
-        tk.Label(self.sidebar, text="USUARIO (ALEJANDRO)",
+        tk.Label(self.sidebar, text=f"USUARIO({self.usuario_actual.upper()})",
                  bg=C["sidebar_bg"], fg="#555577",
                  font=("Segoe UI", 7)).pack(anchor="w", padx=14)
 
@@ -154,14 +173,15 @@ class HotelMatchApp(tk.Tk):
         perfil = tk.Frame(self.sidebar, bg=C["sidebar_bg"])
         perfil.pack(side="bottom", fill="x", padx=10, pady=12)
 
-        tk.Label(perfil, text="A", bg=C["naranja"], fg=C["blanco"],
+        iniciales = obtener_iniciales(USUARIO_ACTUAL)
+        tk.Label(perfil, text=iniciales, bg=C["naranja"], fg=C["blanco"],
                  font=("Segoe UI", 10, "bold"),
                  width=3, height=1).pack(side="left", padx=(0, 8))
 
         datos = tk.Frame(perfil, bg=C["sidebar_bg"])
         datos.pack(side="left")
 
-        tk.Label(datos, text="Alejandro V.", bg=C["sidebar_bg"],
+        tk.Label(datos, text=USUARIO_ACTUAL.upper(), bg=C["sidebar_bg"],
                  fg=C["blanco"], font=("Segoe UI", 9, "bold")).pack(anchor="w")
         tk.Label(datos, text="Premium Member", bg=C["sidebar_bg"],
                  fg=C["texto_light"], font=("Segoe UI", 7)).pack(anchor="w")

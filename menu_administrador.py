@@ -1,26 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
 import datetime
-
-# ─────────────────────────────────────────────
-#  Colores (mismo estilo que menu usuario)
-# ─────────────────────────────────────────────
-C = {
-    "sidebar_bg":  "#2f2f36",
-    "main_bg":     "#f4f4f7",
-    "naranja":     "#e8520a",
-    "naranja_suave": "#fff0e8",
-    "blanco":      "#ffffff",
-    "texto_dark":  "#1a1a2e",
-    "texto_light": "#888899",
-    "borde":       "#e0e0e0",
-    "verde":       "#22c55e",
-    "rojo":        "#ef4444",
-    "amarillo":    "#f59e0b",
-    "azul":        "#3b82f6",
-    "card_bg":     "#ffffff",
-    "header_bg":   "#ffffff",
-}
+from hotelmatch.colores import C
 
 # ─────────────────────────────────────────────
 #  Datos de ejemplo (simulan archivos .txt)

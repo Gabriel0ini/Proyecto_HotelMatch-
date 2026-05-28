@@ -9,6 +9,5 @@ build/
 dist/
 *.egg-info/
 
-# IDE/editor files
+# VS Code
 .vscode/
-*.swp
