@@ -2,15 +2,9 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 import datetime
 from hotelmatch.colores import C
+from hotelmatch.datos import leer_hoteles, agregar_hotel, eliminar_hotel
 
-# ─────────────────────────────────────────────
-#  Datos de ejemplo (simulan archivos .txt)
-# ─────────────────────────────────────────────
-hoteles = [
-    {"id": "HM-9021", "nombre": "LOS TAJIBOS",          "ciudad": "Santa Cruz, Bolivia",   "habitaciones": 208, "rating": 4.9, "estado": "Activo",       "tipo": "LUXURY SEGMENT"},
-    {"id": "HM-8822", "nombre": "GRAN HOTEL PARIS",     "ciudad": "La Paz, Bolivia",       "habitaciones": 16,  "rating": 4.7, "estado": "Activo",       "tipo": "URBAN CONCEPT"},
-    {"id": "HM-1045", "nombre": "GRAN HOTEL COCHABAMBA","ciudad": "Cochabamba, Bolivia",   "habitaciones": 130, "rating": 4.2, "estado": "Mantenimiento","tipo": "WINTER PEAK"},
-]
+
 
 reservas = [
     {"id": "#RES-001", "cliente": "Julian Arce",    "id_cliente": "#HM-48291", "checkin": "12 Oct 2024", "habitacion": "Deluxe Vista Mar",  "estado": "CONFIRMADA", "monto": "Bs450.00"},
@@ -77,26 +71,63 @@ class PaginaPropiedades(tk.Frame):
     def __init__(self, padre, app):
         super().__init__(padre, bg=C["main_bg"])
         self.app = app
+        self.frame_formulario = None
         self._construir()
 
     def _construir(self):
-        # Header
-        header = tk.Frame(self, bg=C["main_bg"])
+        canvas = tk.Canvas(self, bg=C["main_bg"], highlightthickness=0)
+        scrollbar = tk.Scrollbar(self, orient="vertical", command=canvas.yview)
+        self.interior = tk.Frame(canvas, bg=C["main_bg"])
+
+        self.interior.bind("<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+
+        canvas.create_window((0, 0), window=self.interior, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.bind_all("<MouseWheel>",
+            lambda e: canvas.yview_scroll(-1*(e.delta//120), "units"))
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        header = tk.Frame(self.interior, bg=C["main_bg"])
         header.pack(fill="x", padx=28, pady=(24, 0))
         etiqueta_titulo(header, "Propiedades",
                         "Gestión editorial y supervisión de activos hoteleros.")
 
-        # Tarjetas de resumen
-        frame_cards = tk.Frame(self, bg=C["main_bg"])
-        frame_cards.pack(fill="x", padx=28, pady=(0, 16))
+        self.frame_cards = tk.Frame(self.interior, bg=C["main_bg"])
+        self.frame_cards.pack(fill="x", padx=28, pady=(0, 16))
+        self._actualizar_cards()
+
+        separador(self.interior, C["borde"]).pack(fill="x", padx=28, pady=4)
+
+        self.lista_frame = tk.Frame(self.interior, bg=C["main_bg"])
+        self.lista_frame.pack(fill="x", padx=28, pady=8)
+        self._actualizar_lista()
+
+        frame_btn = tk.Frame(self.interior, bg=C["main_bg"])
+        frame_btn.pack(fill="x", padx=28, pady=(4, 0))
+        boton_naranja(frame_btn, "+ Nuevo Registro",
+                      self._mostrar_formulario).pack(side="left")
+
+        self.area_form = tk.Frame(self.interior, bg=C["main_bg"])
+        self.area_form.pack(fill="x", padx=28, pady=8)
+
+    def _actualizar_cards(self):
+        for w in self.frame_cards.winfo_children():
+            w.destroy()
+        hoteles = leer_hoteles()
+        activos = sum(1 for h in hoteles if h.get("estado") == "Activo")
+        mantenimiento = sum(1 for h in hoteles if h.get("estado") == "Mantenimiento")
+        total_hab = sum(int(h.get("habitaciones", 0)) for h in hoteles)
 
         resumen = [
-            ("🏨", "TOTAL ACTIVAS",       "24"),
-            ("🛏", "TOTAL HABITACIONES",  "1,482"),
-            ("🔧", "BAJO MANTENIMIENTO",  "03"),
+            ("🏨", "TOTAL ACTIVAS",      str(activos)),
+            ("🛏", "TOTAL HABITACIONES", f"{total_hab:,}"),
+            ("🔧", "BAJO MANTENIMIENTO", f"{mantenimiento:02d}"),
         ]
         for icono, etiqueta, valor in resumen:
-            c = tarjeta(frame_cards)
+            c = tarjeta(self.frame_cards)
             c.pack(side="left", padx=(0, 12), pady=4, ipadx=20, ipady=14)
             tk.Label(c, text=icono, font=("Segoe UI", 20),
                      bg=C["card_bg"], fg=C["naranja"]).pack(anchor="w", padx=16, pady=(12, 0))
@@ -105,48 +136,113 @@ class PaginaPropiedades(tk.Frame):
             tk.Label(c, text=valor, font=("Segoe UI", 20, "bold"),
                      bg=C["card_bg"], fg=C["texto_dark"]).pack(anchor="w", padx=16, pady=(0, 12))
 
-        # Lista de hoteles
-        separador(self, C["borde"]).pack(fill="x", padx=28, pady=4)
-        lista_frame = tk.Frame(self, bg=C["main_bg"])
-        lista_frame.pack(fill="both", expand=True, padx=28, pady=8)
-
-        for hotel in hoteles:
-            self._fila_hotel(lista_frame, hotel)
-
-        # Botón nuevo registro
-        frame_btn = tk.Frame(self, bg=C["main_bg"])
-        frame_btn.pack(fill="x", padx=28, pady=12)
-        boton_naranja(frame_btn, "+ Nuevo Registro",
-                      lambda: messagebox.showinfo("Nuevo", "Formulario de nuevo hotel")).pack(side="left")
+    def _actualizar_lista(self):
+        for w in self.lista_frame.winfo_children():
+            w.destroy()
+        for hotel in leer_hoteles():
+            self._fila_hotel(self.lista_frame, hotel)
 
     def _fila_hotel(self, padre, hotel):
         fila = tarjeta(padre)
         fila.pack(fill="x", pady=5)
 
-        # Tipo
-        tk.Label(fila, text=hotel["tipo"],
+        tk.Label(fila, text=hotel.get("tipo", ""),
                  font=("Segoe UI", 8, "bold"),
                  fg=C["naranja"], bg=C["card_bg"]).grid(row=0, column=0, sticky="w", padx=16, pady=(10, 0))
-
-        # Nombre
-        tk.Label(fila, text=hotel["nombre"],
+        tk.Label(fila, text=hotel.get("nombre", ""),
                  font=("Segoe UI", 13, "bold"),
                  fg=C["texto_dark"], bg=C["card_bg"]).grid(row=1, column=0, sticky="w", padx=16)
 
-        # Info
-        info = f"📍 {hotel['ciudad']}    🛏 {hotel['habitaciones']} Habitaciones    ⭐ {hotel['rating']} Rating"
+        info = f"📍 {hotel.get('ciudad','')}    🛏 {hotel.get('habitaciones','')} Habitaciones    ⭐ {hotel.get('rating','')} Rating"
         tk.Label(fila, text=info,
                  font=("Segoe UI", 9),
                  fg=C["texto_light"], bg=C["card_bg"]).grid(row=2, column=0, sticky="w", padx=16, pady=(0, 10))
 
-        # Estado
-        color = C["verde"] if hotel["estado"] == "Activo" else C["amarillo"]
-        chip_estado(fila, f"● {hotel['estado']}", color).grid(row=0, column=1, sticky="e", padx=16, pady=(10, 0))
-        tk.Label(fila, text=f"ID: {hotel['id']}",
+        color = C["verde"] if hotel.get("estado") == "Activo" else C["amarillo"]
+        chip_estado(fila, f"● {hotel.get('estado','')}", color).grid(row=0, column=1, sticky="e", padx=16, pady=(10, 0))
+        tk.Label(fila, text=f"ID: {hotel.get('id','')}",
                  font=("Segoe UI", 8), fg=C["texto_light"],
                  bg=C["card_bg"]).grid(row=1, column=1, sticky="e", padx=16)
 
+        tk.Label(fila, text="✕", font=("Segoe UI", 10), fg=C["rojo"],
+                 bg=C["card_bg"], cursor="hand2").grid(row=2, column=1, sticky="e", padx=16, pady=(0, 10))
+        fila.winfo_children()[-1].bind("<Button-1>",
+            lambda e, id=hotel.get("id"): self._eliminar(id))
+
         fila.columnconfigure(0, weight=1)
+
+    def _eliminar(self, id_hotel):
+        if messagebox.askyesno("Confirmar", "¿Eliminar este hotel?"):
+            eliminar_hotel(id_hotel)
+            self._actualizar_lista()
+            self._actualizar_cards()
+
+    def _mostrar_formulario(self):
+        for w in self.area_form.winfo_children():
+            w.destroy()
+
+        form = tarjeta(self.area_form)
+        form.pack(fill="x", pady=8)
+
+        tk.Label(form, text="NUEVO HOTEL", font=("Segoe UI", 10, "bold"),
+                 fg=C["naranja"], bg=C["card_bg"]).grid(row=0, column=0, columnspan=4,
+                 sticky="w", padx=16, pady=(14, 8))
+
+        campos = [
+            ("Nombre",       "nombre"),
+            ("Ciudad",       "ciudad"),
+            ("Habitaciones", "habitaciones"),
+            ("Rating",       "rating"),
+            ("Tipo",         "tipo"),
+            ("Descripción",  "descripcion"),
+            ("Emoji",        "emoji"),
+        ]
+
+        entradas = {}
+        for i, (etiqueta, clave) in enumerate(campos):
+            col = (i % 2) * 2
+            row = (i // 2) + 1
+            tk.Label(form, text=etiqueta, font=("Segoe UI", 8),
+                     fg=C["texto_mid"], bg=C["card_bg"]).grid(
+                     row=row, column=col, sticky="w", padx=(16, 4), pady=4)
+            entrada = tk.Entry(form, font=("Segoe UI", 9), width=24,
+                               relief="solid", bd=1)
+            entrada.grid(row=row, column=col + 1, sticky="w", padx=(0, 16), pady=4)
+            entradas[clave] = entrada
+
+        tk.Label(form, text="Estado", font=("Segoe UI", 8),
+                 fg=C["texto_mid"], bg=C["card_bg"]).grid(
+                 row=len(campos) // 2 + 2, column=0, sticky="w", padx=(16, 4), pady=4)
+        estado_var = tk.StringVar(value="Activo")
+        tk.OptionMenu(form, estado_var, "Activo", "Mantenimiento", "Inactivo").grid(
+                 row=len(campos) // 2 + 2, column=1, sticky="w", pady=4)
+
+        fila_btn = len(campos) // 2 + 3
+        boton_naranja(form, "Guardar Hotel",
+                      lambda: self._guardar(entradas, estado_var, form)).grid(
+                      row=fila_btn, column=0, columnspan=2, padx=16, pady=(8, 14), sticky="w")
+        tk.Label(form, text="Cancelar", font=("Segoe UI", 9),
+                 fg=C["rojo"], bg=C["card_bg"], cursor="hand2").grid(
+                 row=fila_btn, column=2, columnspan=2, sticky="w", pady=(8, 14))
+        form.winfo_children()[-1].bind("<Button-1>",
+            lambda e: [w.destroy() for w in self.area_form.winfo_children()])
+
+    def _guardar(self, entradas, estado_var, form):
+        datos = {clave: entrada.get().strip() for clave, entrada in entradas.items()}
+        datos["estado"] = estado_var.get()
+
+        if not datos["nombre"] or not datos["ciudad"]:
+            messagebox.showwarning("Campos vacíos", "Nombre y Ciudad son obligatorios.")
+            return
+
+        agregar_hotel(datos)
+        messagebox.showinfo("Éxito", f"Hotel '{datos['nombre']}' guardado correctamente.")
+
+        for w in self.area_form.winfo_children():
+            w.destroy()
+        self._actualizar_lista()
+        self._actualizar_cards()
+    
 
 # ─────────────────────────────────────────────
 #  PÁGINA: Reservas
