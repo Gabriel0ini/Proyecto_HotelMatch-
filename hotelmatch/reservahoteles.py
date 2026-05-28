@@ -1,3 +1,7 @@
+import sys
+import tkinter as tk
+from colores import C
+from widgets import separador, boton_naranja
 
 import tkinter as tk
 from colores import C
@@ -7,6 +11,8 @@ from paginas.inicio         import PaginaInicio
 from paginas.mis_estancias  import PaginaMisEstancias
 from paginas.favoritos      import PaginaFavoritos
 from paginas.configuracion  import PaginaConfiguracion
+
+USUARIO_ACTUAL = sys.argv[1] if len(sys.argv) > 1 else "Usuario"
 
 
 class HotelMatchApp(tk.Tk):
@@ -92,7 +98,7 @@ class HotelMatchApp(tk.Tk):
         tk.Label(frame_logo, text=" MATCH",  bg=C["sidebar_bg"],
                  fg=C["blanco"],  font=("Segoe UI", 12, "bold")).pack(side="left")
 
-        tk.Label(self.sidebar, text="USUARIO (ALEJANDRO)",
+        tk.Label(self.sidebar, text=f"USUARIO({USUARIO_ACTUAL.upper()})",
                  bg=C["sidebar_bg"], fg="#555577",
                  font=("Segoe UI", 7)).pack(anchor="w", padx=14)
 
@@ -161,7 +167,7 @@ class HotelMatchApp(tk.Tk):
         datos = tk.Frame(perfil, bg=C["sidebar_bg"])
         datos.pack(side="left")
 
-        tk.Label(datos, text="Alejandro V.", bg=C["sidebar_bg"],
+        tk.Label(datos, text=USUARIO_ACTUAL.upper()[:2], bg=C["sidebar_bg"],
                  fg=C["blanco"], font=("Segoe UI", 9, "bold")).pack(anchor="w")
         tk.Label(datos, text="Premium Member", bg=C["sidebar_bg"],
                  fg=C["texto_light"], font=("Segoe UI", 7)).pack(anchor="w")
