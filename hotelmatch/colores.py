@@ -4,6 +4,7 @@ C = {
     "sidebar_bg":   "#2f2f36",
     "main_bg":      "#f5f5f5",
     "blanco":       "#ffffff",
+    "card_bg":      "#ffffff",
     "borde":        "#e0e0e0",
 
     
