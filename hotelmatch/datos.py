@@ -1,6 +1,7 @@
 
 
 import os
+import json
 
 CARPETA_DATOS = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
@@ -24,7 +25,12 @@ def _linea_a_dict(linea):
     campos = {}
     for par in linea.strip().split("|"):
         if "=" in par:
-            clave, valor = par.split("=", 1)  
+            clave, valor = par.split("=", 1)
+            if valor.startswith("[") and valor.endswith("]"):
+                try:
+                    valor = json.loads(valor)
+                except json.JSONDecodeError:
+                    pass
             campos[clave] = valor
     return campos
 
@@ -36,7 +42,12 @@ def _dict_a_linea(diccionario):
           ↓
     'id=1|hotel=Palacio de Sal'
     """
-    return "|".join(f"{k}={v}" for k, v in diccionario.items())
+    def valor_a_texto(valor):
+        if isinstance(valor, list):
+            return json.dumps(valor, ensure_ascii=False)
+        return valor
+
+    return "|".join(f"{k}={valor_a_texto(v)}" for k, v in diccionario.items())
 
 
 

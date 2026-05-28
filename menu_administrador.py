@@ -1,3 +1,4 @@
+import os
 import tkinter as tk
 from tkinter import messagebox, ttk
 import datetime
@@ -146,14 +147,21 @@ class PaginaPropiedades(tk.Frame):
         fila = tarjeta(padre)
         fila.pack(fill="x", pady=5)
 
-        tk.Label(fila, text=hotel.get("tipo", ""),
+        tipo_texto = hotel.get("tipo", "")
+        if isinstance(tipo_texto, list):
+            tipo_texto = ", ".join(tipo_texto)
+        tk.Label(fila, text=tipo_texto,
                  font=("Segoe UI", 8, "bold"),
                  fg=C["naranja"], bg=C["card_bg"]).grid(row=0, column=0, sticky="w", padx=16, pady=(10, 0))
         tk.Label(fila, text=hotel.get("nombre", ""),
                  font=("Segoe UI", 13, "bold"),
                  fg=C["texto_dark"], bg=C["card_bg"]).grid(row=1, column=0, sticky="w", padx=16)
 
-        info = f"📍 {hotel.get('ciudad','')}    🛏 {hotel.get('habitaciones','')} Habitaciones    ⭐ {hotel.get('rating','')} Rating"
+        tipo_texto = hotel.get("tipo", "")
+        if isinstance(tipo_texto, list):
+            tipo_texto = ", ".join(tipo_texto)
+
+        info = f"📍 {hotel.get('ciudad','')}    🛏 {hotel.get('habitaciones','')} Habitaciones"
         tk.Label(fila, text=info,
                  font=("Segoe UI", 9),
                  fg=C["texto_light"], bg=C["card_bg"]).grid(row=2, column=0, sticky="w", padx=16, pady=(0, 10))
@@ -192,10 +200,7 @@ class PaginaPropiedades(tk.Frame):
             ("Nombre",       "nombre"),
             ("Ciudad",       "ciudad"),
             ("Habitaciones", "habitaciones"),
-            ("Rating",       "rating"),
-            ("Tipo",         "tipo"),
             ("Descripción",  "descripcion"),
-            ("Emoji",        "emoji"),
         ]
 
         entradas = {}
@@ -210,6 +215,32 @@ class PaginaPropiedades(tk.Frame):
             entrada.grid(row=row, column=col + 1, sticky="w", padx=(0, 16), pady=4)
             entradas[clave] = entrada
 
+        tipo_opciones = [
+            "Luxury Segment",
+            "Urban Concept",
+            "Winter Peak",
+            "Business",
+            "Resort",
+            "Boutique",
+            "Familiar",
+        ]
+        tipo_vars = {}
+        fila_tipo = len(campos) // 2 + 1
+        tk.Label(form, text="Tipo", font=("Segoe UI", 8),
+                 fg=C["texto_mid"], bg=C["card_bg"]).grid(
+                 row=fila_tipo, column=0, sticky="nw", padx=(16, 4), pady=4)
+        tipo_frame = tk.Frame(form, bg=C["card_bg"])
+        tipo_frame.grid(row=fila_tipo, column=1, columnspan=3,
+                        sticky="w", padx=(0, 16), pady=4)
+        for i, opcion in enumerate(tipo_opciones):
+            var = tk.BooleanVar(value=False)
+            cb = tk.Checkbutton(tipo_frame, text=opcion, variable=var,
+                                bg=C["card_bg"], fg=C["texto_dark"],
+                                activebackground=C["card_bg"], selectcolor=C["card_bg"],
+                                font=("Segoe UI", 8), anchor="w")
+            cb.grid(row=i // 2, column=i % 2, sticky="w", padx=(0, 14), pady=2)
+            tipo_vars[opcion] = var
+
         tk.Label(form, text="Estado", font=("Segoe UI", 8),
                  fg=C["texto_mid"], bg=C["card_bg"]).grid(
                  row=len(campos) // 2 + 2, column=0, sticky="w", padx=(16, 4), pady=4)
@@ -219,7 +250,7 @@ class PaginaPropiedades(tk.Frame):
 
         fila_btn = len(campos) // 2 + 3
         boton_naranja(form, "Guardar Hotel",
-                      lambda: self._guardar(entradas, estado_var, form)).grid(
+                      lambda: self._guardar(entradas, tipo_vars, estado_var, form)).grid(
                       row=fila_btn, column=0, columnspan=2, padx=16, pady=(8, 14), sticky="w")
         tk.Label(form, text="Cancelar", font=("Segoe UI", 9),
                  fg=C["rojo"], bg=C["card_bg"], cursor="hand2").grid(
@@ -227,12 +258,18 @@ class PaginaPropiedades(tk.Frame):
         form.winfo_children()[-1].bind("<Button-1>",
             lambda e: [w.destroy() for w in self.area_form.winfo_children()])
 
-    def _guardar(self, entradas, estado_var, form):
+    def _guardar(self, entradas, tipo_vars, estado_var, form):
         datos = {clave: entrada.get().strip() for clave, entrada in entradas.items()}
+        tipos_seleccionados = [tipo for tipo, var in tipo_vars.items() if var.get()]
+        datos["tipo"] = tipos_seleccionados
         datos["estado"] = estado_var.get()
 
         if not datos["nombre"] or not datos["ciudad"]:
             messagebox.showwarning("Campos vacíos", "Nombre y Ciudad son obligatorios.")
+            return
+
+        if not tipos_seleccionados:
+            messagebox.showwarning("Tipo requerido", "Debes seleccionar al menos un tipo de hotel.")
             return
 
         agregar_hotel(datos)
@@ -308,6 +345,9 @@ class PaginaReservas(tk.Frame):
         nombre_mes = ["", "Enero","Febrero","Marzo","Abril","Mayo","Junio",
                       "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"][self.mes]
 
+        self.reservas = self._leer_reservas()
+        self.reservas_por_dia = self._mapear_reservas_por_dia(self.reservas, self.anio, self.mes)
+
         # Navegación
         nav = tk.Frame(self.frame_cal, bg=C["card_bg"])
         nav.pack(fill="x", padx=14, pady=10)
@@ -353,11 +393,24 @@ class PaginaReservas(tk.Frame):
                     es_hoy = (dia_num == hoy.day and
                               self.mes == hoy.month and
                               self.anio == hoy.year)
-                    bg = C["naranja"] if es_hoy else C["card_bg"]
-                    fg = C["blanco"] if es_hoy else C["texto_dark"]
-                    tk.Label(grid, text=str(dia_num),
-                             font=("Segoe UI", 9, "bold" if es_hoy else "normal"),
-                             bg=bg, fg=fg, width=5, height=2).grid(row=fila, column=col)
+                    reservado = self.reservas_por_dia.get(dia_num)
+                    if reservado:
+                        reserva = reservado[0]
+                        color = reserva.get("color_hex", "#10B981")
+                        btn = tk.Button(grid, text=str(dia_num),
+                                        font=("Segoe UI", 9, "bold" if es_hoy else "normal"),
+                                        bg=color, fg=C["blanco"],
+                                        activebackground=color,
+                                        relief="flat", width=5, height=2,
+                                        cursor="hand2",
+                                        command=lambda d=dia_num: self._mostrar_detalle_dia(d))
+                        btn.grid(row=fila, column=col, padx=1, pady=1)
+                    else:
+                        bg = C["naranja"] if es_hoy else C["card_bg"]
+                        fg = C["blanco"] if es_hoy else C["texto_dark"]
+                        tk.Label(grid, text=str(dia_num),
+                                 font=("Segoe UI", 9, "bold" if es_hoy else "normal"),
+                                 bg=bg, fg=fg, width=5, height=2).grid(row=fila, column=col)
                     dia_num += 1
 
     def _mes_anterior(self):
@@ -366,6 +419,96 @@ class PaginaReservas(tk.Frame):
         else:
             self.mes -= 1
         self._dibujar_calendario()
+
+    def _leer_reservas(self):
+        ruta = os.path.join(os.path.dirname(__file__), "reservas.txt")
+        reservas = []
+        if not os.path.exists(ruta):
+            return reservas
+        with open(ruta, "r", encoding="utf-8") as archivo:
+            for linea in archivo:
+                linea = linea.strip()
+                if not linea:
+                    continue
+                partes = [pieza.strip() for pieza in linea.split(",")]
+                if len(partes) != 8:
+                    continue
+                codigo, cliente, hotel_nombre, color_hex, check_in, check_out, monto, estado = partes
+                try:
+                    fecha_entrada = datetime.date.fromisoformat(check_in)
+                    fecha_salida = datetime.date.fromisoformat(check_out)
+                except ValueError:
+                    continue
+                reservas.append({
+                    "codigo": codigo,
+                    "cliente": cliente,
+                    "hotel_nombre": hotel_nombre,
+                    "color_hex": color_hex,
+                    "check_in": fecha_entrada,
+                    "check_out": fecha_salida,
+                    "monto": monto,
+                    "estado": estado,
+                })
+        return reservas
+
+    def _mapear_reservas_por_dia(self, reservas, anio, mes):
+        dias_veh = {}
+        primer_dia_mes = datetime.date(anio, mes, 1)
+        if mes == 12:
+            ultimo_dia_mes = datetime.date(anio, 12, 31)
+        else:
+            ultimo_dia_mes = datetime.date(anio, mes + 1, 1) - datetime.timedelta(days=1)
+
+        for reserva in reservas:
+            inicio = max(reserva["check_in"], primer_dia_mes)
+            fin = min(reserva["check_out"], ultimo_dia_mes)
+            if inicio > fin:
+                continue
+            fecha_actual = inicio
+            while fecha_actual <= fin:
+                dia = fecha_actual.day
+                dias_veh.setdefault(dia, []).append(reserva)
+                fecha_actual += datetime.timedelta(days=1)
+        return dias_veh
+
+    def _mostrar_detalle_dia(self, dia):
+        reservas = self.reservas_por_dia.get(dia, [])
+        if not reservas:
+            return
+
+        fecha = datetime.date(self.anio, self.mes, dia)
+        ventana = tk.Toplevel(self)
+        ventana.title(f"Reservas {fecha.isoformat()}")
+        ventana.geometry("420x260")
+        ventana.configure(bg=C["main_bg"])
+        ventana.transient(self)
+        ventana.grab_set()
+
+        tk.Label(ventana, text=f"Reservas para {fecha.strftime('%d %b %Y')}",
+                 bg=C["main_bg"], fg=C["texto_dark"],
+                 font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=16, pady=(16, 8))
+
+        detalle_frame = tk.Frame(ventana, bg=C["main_bg"])
+        detalle_frame.pack(fill="both", expand=True, padx=16, pady=(0, 12))
+
+        for reserva in reservas:
+            bloque = tk.Frame(detalle_frame, bg=C["main_bg"], bd=1,
+                              relief="solid", highlightbackground=C["borde"],
+                              highlightthickness=1)
+            bloque.pack(fill="x", pady=6)
+
+            tk.Label(bloque, text=f"{reserva['hotel_nombre']} — {reserva['estado']}",
+                     bg=C["main_bg"], fg=C["texto_dark"],
+                     font=("Segoe UI", 10, "bold")).pack(anchor="w", padx=10, pady=(8, 0))
+            tk.Label(bloque, text=f"Código: {reserva['codigo']} | Cliente: {reserva['cliente']}",
+                     bg=C["main_bg"], fg=C["texto_light"],
+                     font=("Segoe UI", 9)).pack(anchor="w", padx=10, pady=(2, 0))
+            tk.Label(bloque, text=f"{reserva['check_in'].isoformat()} → {reserva['check_out'].isoformat()}",
+                     bg=C["main_bg"], fg=C["texto_light"],
+                     font=("Segoe UI", 9)).pack(anchor="w", padx=10, pady=(2, 0))
+            tk.Label(bloque, text=f"Monto: Bs{reserva['monto']} | Color: {reserva['color_hex']}",
+                     bg=C["main_bg"], fg=C["texto_light"],
+                     font=("Segoe UI", 9)).pack(anchor="w", padx=10, pady=(2, 8))
 
     def _mes_siguiente(self):
         if self.mes == 12:

@@ -149,8 +149,17 @@ class HotelMatchApp(tk.Tk):
         )
         lbl.pack(fill="x")
 
-        for widget in (contenedor, lbl):
-            widget.bind("<Button-1>", lambda e, c=clave: self.navegar(c))
+        # Si es el botón 'inicio', primero limpiamos el filtro de ciudad.
+        if clave == "inicio":
+            def _click_inicio(e=None):
+                setattr(self, 'filtro_ciudad', None)
+                self.navegar('inicio')
+
+            for widget in (contenedor, lbl):
+                widget.bind("<Button-1>", _click_inicio)
+        else:
+            for widget in (contenedor, lbl):
+                widget.bind("<Button-1>", lambda e, c=clave: self.navegar(c))
 
         def hover_on(e, f=contenedor, l=lbl):
             if self._pagina_actual != clave:

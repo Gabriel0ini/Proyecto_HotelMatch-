@@ -139,21 +139,45 @@ class PaginaInicio(tk.Frame):
             lambda: self.app.navegar("mis_estancias")  
         ).pack(anchor="w")
     def _seccion_sugerencias(self, padre):
-        titulo_seccion(
-            padre,
-            "HOTELES DISPONIBLES"
-        ).pack(anchor="w", pady=(0, 10))
+        # Capturamos si viene un filtro desde favoritos
+        filtro = getattr(self.app, 'filtro_ciudad', None)
+
+        if filtro:
+            titulo_seccion(
+                padre, 
+                f"HOTELES EN {filtro.upper()}"
+            ).pack(anchor="w", pady=(0, 10))
+        else:
+            titulo_seccion(
+                padre, 
+                "HOTELES DISPONIBLES"
+            ).pack(anchor="w", pady=(0, 10))
 
         from datos import leer_hoteles
         hoteles = [h for h in leer_hoteles() if h.get("estado", "").lower() == "activo"]
 
+        # REFACTOR: Si hay un filtro activo, reducimos la lista a los que coincidan con la ciudad
+        if filtro:
+            hoteles = [
+                h for h in hoteles 
+                if filtro.lower() in h.get("ciudad", "").lower()
+            ]
+
         if not hoteles:
             tk.Label(
                 padre,
-                text="No hay hoteles disponibles por el momento.",
+                text="No hay hoteles disponibles en esta zona por el momento.",
                 bg=C["main_bg"], fg=C["texto_mid"],
                 font=("Segoe UI", 9)
             ).pack(anchor="w")
+            
+            # Si no hay resultados, ofrecemos un botón para limpiar el filtro
+            if filtro:
+                tk.Button(
+                    padre, text="Mostrar todos los hoteles",
+                    command=self._limpiar_filtro_y_recargar,
+                    bg=C["borde"], relief="flat", font=("Segoe UI", 8)
+                ).pack(anchor="w", pady=5)
             return
 
         contenedor = tk.Frame(padre, bg=C["main_bg"])
@@ -162,6 +186,11 @@ class PaginaInicio(tk.Frame):
         for hotel in hoteles:
             self._card_hotel(contenedor, hotel)
 
+    # REFACTOR: Método auxiliar para remover el filtro
+    def _limpiar_filtro_y_recargar(self):
+        setattr(self.app, 'filtro_ciudad', None)
+        self.app.navegar("inicio")
+        
     def _card_hotel(self, padre, hotel):
         tarjeta = tk.Frame(
             padre,
@@ -171,18 +200,21 @@ class PaginaInicio(tk.Frame):
         )
         tarjeta.pack(side="left", padx=(0, 14))
 
-        # Banner superior con emoji
+        # Banner superior
         banner = tk.Canvas(tarjeta, width=180, height=90,
                            bg="#dde8f0", highlightthickness=0)
         banner.pack()
-        banner.create_text(90, 45, text=hotel.get("emoji", "🏨"),
-                           font=("Segoe UI", 30))
+        banner.create_text(90, 45, text="HOTEL",
+                           font=("Segoe UI", 16, "bold"), fill=C["naranja"])
 
         info = tk.Frame(tarjeta, bg=C["blanco"])
         info.pack(fill="x", padx=12, pady=(8, 12))
 
         # Tipo de hotel
-        tk.Label(info, text=hotel.get("tipo", "").upper(),
+        tipo_texto = hotel.get("tipo", "")
+        if isinstance(tipo_texto, list):
+            tipo_texto = ", ".join(tipo_texto)
+        tk.Label(info, text=tipo_texto.upper(),
                  bg=C["naranja_suave"], fg=C["naranja"],
                  font=("Segoe UI", 7, "bold"),
                  padx=6, pady=2).pack(anchor="w")
@@ -198,24 +230,30 @@ class PaginaInicio(tk.Frame):
                  bg=C["blanco"], fg=C["texto_mid"],
                  font=("Segoe UI", 8)).pack(anchor="w", pady=(2, 4))
 
-        # Fila rating + habitaciones
+        # Fila habitaciones + botón
         fila = tk.Frame(info, bg=C["blanco"])
         fila.pack(anchor="w")
-        boton_naranja(
-            info,
-            "RESERVAR",
-            lambda h=hotel: self._abrir_reserva(h),
-            ancho=14
-        ).pack(anchor="w", pady=(8, 0))
-
-        tk.Label(fila, text=f"⭐ {hotel.get('rating', '-')}" ,
-                 bg=C["blanco"], fg=C["texto_dark"],
-                 font=("Segoe UI", 8, "bold")).pack(side="left", padx=(0, 10))
 
         tk.Label(fila, text=f"🛏 {hotel.get('habitaciones', '-')} hab.",
                  bg=C["blanco"], fg=C["texto_mid"],
                  font=("Segoe UI", 8)).pack(side="left")
-    
+
+        botones = tk.Frame(info, bg=C["blanco"])
+        botones.pack(anchor="w", pady=(8, 0))
+
+        btn_reservar = tk.Button(
+            botones,
+            text="RESERVAR",
+            command=lambda h=hotel: self._abrir_reserva(h),
+            bg=C["naranja"], fg=C["blanco"],
+            activebackground="#c94208",
+            relief="flat",
+            font=("Segoe UI", 9, "bold"),
+            cursor="hand2",
+            padx=14, pady=8
+        )
+        btn_reservar.pack(side="left")
+
     def _abrir_reserva(self, hotel):
         from tkinter import Toplevel, messagebox
         from paginas.mis_estancias import FormularioReserva
@@ -229,15 +267,22 @@ class PaginaInicio(tk.Frame):
 
         ventana = Toplevel(self)
         ventana.title("Nueva Reserva")
-        ventana.geometry("420x480")
-        ventana.resizable(False, False)
+        
+        # CAMBIO CRÍTICO: Ampliamos la altura a 620 para dar espacio al botón
+        ventana.geometry("440x620") 
+        ventana.resizable(False, True)  # Permitimos redimensionar verticalmente por si acaso
         ventana.configure(bg=C["main_bg"])
         ventana.transient(self.app)
         ventana.grab_set()
 
+        def al_guardar_reserva():
+            messagebox.showinfo("Éxito", "Reserva registrada correctamente en reservas.txt")
+            ventana.destroy()
+            self.app.navegar("mis_estancias")
+
         FormularioReserva(
             ventana,
             self.app,
-            lambda: None,   # no necesita refrescar inicio
+            al_guardar_reserva,  
             hotel_prellenado=hotel
-    )
+        )

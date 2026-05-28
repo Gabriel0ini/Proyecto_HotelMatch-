@@ -349,19 +349,31 @@ class FormularioReserva:
         fila_btns = tk.Frame(pad, bg=C["main_bg"])
         fila_btns.pack(fill="x")
 
-        boton_naranja(
+        btn_confirm = tk.Button(
             fila_btns,
-            "Confirmar",
-            lambda: self._guardar(confirmar=True),
-            ancho=14
-        ).pack(side="left")
+            text="Confirmar",
+            command=lambda: self._guardar(confirmar=True),
+            bg=C["naranja"], fg=C["blanco"],
+            activebackground="#c94208",
+            relief="flat",
+            font=("Segoe UI", 9, "bold"),
+            cursor="hand2",
+            padx=14, pady=8
+        )
+        btn_confirm.pack(side="left")
 
-        boton_naranja(
+        btn_guardar = tk.Button(
             fila_btns,
-            "Guardar",
-            lambda: self._guardar(confirmar=False),
-            ancho=14
-        ).pack(side="left", padx=(8, 0))
+            text="Guardar",
+            command=lambda: self._guardar(confirmar=False),
+            bg=C["naranja"], fg=C["blanco"],
+            activebackground="#c94208",
+            relief="flat",
+            font=("Segoe UI", 9, "bold"),
+            cursor="hand2",
+            padx=14, pady=8
+        )
+        btn_guardar.pack(side="left", padx=(8, 0))
 
         lbl_cancelar = tk.Label(
             fila_btns,

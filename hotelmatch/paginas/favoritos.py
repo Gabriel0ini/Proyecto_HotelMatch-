@@ -217,7 +217,9 @@ class PaginaFavoritos(tk.Frame):
         # ── Separador ──────────────────────────────────
         separador(interior).pack(fill="x", pady=(0, 10))
 
-        # ── Fila 5: precio + botón quitar ─────────────
+# ... (Mantén todo igual en tu archivo hasta llegar a la Fila 5 dentro de _card_favorito)
+
+        # ── Fila 5: precio + botón quitar + botón ver hoteles ─────────────
         fila_bottom = tk.Frame(interior, bg=C["blanco"])
         fila_bottom.pack(fill="x")
 
@@ -229,40 +231,83 @@ class PaginaFavoritos(tk.Frame):
             font=("Segoe UI", 11, "bold")
         ).pack(side="left")
 
-        # Botón quitar con hover
+        # Botón quitar con hover (Existente)
         id_fav = fav.get("id")
         self._boton_quitar(fila_bottom, id_fav)
 
-    def _boton_quitar(self, padre, id_fav):
-        """
-        Botón 'Quitar de favoritos' con efecto hover rojo.
-        Mismo patrón que boton_naranja pero en rojo.
-        """
-        btn = tk.Label(
+        # REFACTOR: Añadimos el nuevo botón para ver los hoteles de esa ciudad
+        ciudad_destino = fav.get("ciudad", "")
+        self._boton_ver_hoteles(fila_bottom, ciudad_destino)
+
+    def _boton_ver_hoteles(self, padre, ciudad):
+        """Botón interactivo para filtrar la lista de inicio por ciudad."""
+        btn_ver = tk.Label(
             padre,
-            text="🗑  Quitar",
-            bg=C["blanco"], fg="#e74c3c",
-            font=("Segoe UI", 8),
+            text="🔍  Ver Hoteles",
+            bg=C["blanco"], fg=C["naranja"],
+            font=("Segoe UI", 8, "bold"),
             cursor="hand2"
         )
-        btn.pack(side="right")
+        # Lo posicionamos a la derecha, dejando un espacio con el botón quitar
+        btn_ver.pack(side="right", padx=(0, 16))
 
-        # Hover: más oscuro al pasar el mouse
-        btn.bind("<Enter>", lambda e: btn.config(fg="#c0392b"))
-        btn.bind("<Leave>", lambda e: btn.config(fg="#e74c3c"))
-        btn.bind(
+        # Efecto Hover
+        btn_ver.bind("<Enter>", lambda e: btn_ver.config(fg=C["texto_dark"]))
+        btn_ver.bind("<Leave>", lambda e: btn_ver.config(fg=C["naranja"]))
+        
+        # Acción al hacer click
+        btn_ver.bind(
             "<Button-1>",
-            lambda e, rid=id_fav: self._confirmar_quitar(rid)
+            lambda e, c=ciudad: self._filtrar_y_navegar(c)
         )
+
+    def _boton_quitar(self, padre, id_fav):
+        """Crea el botón/etiqueta para quitar un favorito y lo enlaza a la confirmación."""
+        btn_quitar = tk.Label(
+            padre,
+            text="🗑  Quitar",
+            bg=C["blanco"], fg=C["texto_mid"],
+            font=("Segoe UI", 8, "bold"),
+            cursor="hand2"
+        )
+        btn_quitar.pack(side="right", padx=(0, 8))
+
+        # Hover
+        btn_quitar.bind("<Enter>", lambda e: btn_quitar.config(fg=C["texto_dark"]))
+        btn_quitar.bind("<Leave>", lambda e: btn_quitar.config(fg=C["texto_mid"]))
+
+        # Click -> confirmar y eliminar
+        btn_quitar.bind("<Button-1>", lambda e, i=id_fav: self._confirmar_quitar(i))
 
     # ── Acciones ──────────────────────────────────────────
 
+    # REFACTOR: Nueva acción para conectar con la App principal
+    def _filtrar_y_navegar(self, ciudad_completa):
+        """Limpia el formato de la ciudad, define el filtro global y navega al inicio."""
+        # Si la ciudad viene como "Santa Cruz, Bolivia", extraemos solo "Santa Cruz"
+        ciudad_limpia = ciudad_completa.split(",")[0].strip()
+        
+        # Guardamos el filtro en la instancia principal de la aplicación
+        setattr(self.app, 'filtro_ciudad', ciudad_limpia)
+        
+        # Redireccionamos a la página de inicio
+        self.app.navegar("inicio")
+
     def _confirmar_quitar(self, id_fav):
-        """Confirma antes de eliminar el favorito."""
-        confirmado = messagebox.askyesno(
+        """Pregunta confirmación y elimina el favorito si el usuario acepta."""
+        respuesta = messagebox.askyesno(
             "Quitar favorito",
-            "¿Quitar este destino de tus favoritos?"
+            "¿Estás seguro de que quieres quitar este favorito?"
         )
-        if confirmado:
+        if not respuesta:
+            return
+
+        try:
             eliminar_favorito(id_fav)
-            self._renderizar_lista()   
+        except Exception:
+            messagebox.showerror("Error", "No se pudo eliminar el favorito.")
+            return
+
+        # Refrescar la lista y el contador
+        self._renderizar_lista()
+        messagebox.showinfo("Eliminado", "Favorito eliminado correctamente.")
