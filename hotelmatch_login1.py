@@ -374,7 +374,7 @@ class AplicacionHotelMatch(tk.Tk):
             usuario_encontrado = buscar_usuario(nombre)
             if usuario_encontrado and usuario_encontrado["contrasena"] == clave:
                 self.destroy()  # cierra la ventana del login
-                subprocess.Popen([sys.executable, "hotelmatch/reservahoteles.py", nombre])
+                subprocess.Popen([sys.executable, "hotelmatch/reservahoteles.py"])
                #  messagebox.showinfo(
                   #  "Bienvenido",
                  #   f"¡Bienvenido, {nombre}!\n(Aquí se carga el menú de usuario)"
@@ -671,6 +671,7 @@ class AplicacionHotelMatch(tk.Tk):
             nombre = entrada_usuario.get().strip()
             clave  = entrada_contrasena.get().strip()
             datos_admin = cargar_administrador()
+
             if nombre == datos_admin["usuario"] and \
                clave  == datos_admin["contrasena"]:
                    self.destroy()

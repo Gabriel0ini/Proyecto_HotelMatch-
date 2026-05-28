@@ -39,13 +39,6 @@ class PaginaMisEstancias(tk.Frame):
             font=("Segoe UI", 16, "bold")
         ).pack(side="left")
 
-        boton_naranja(
-            interior,
-            "+ NUEVA RESERVA",
-            self._abrir_formulario,
-            ancho=16
-        ).pack(side="right")
-
 
     def _area_scroll(self):
         """
@@ -120,7 +113,7 @@ class PaginaMisEstancias(tk.Frame):
 
         tk.Label(
             padre,
-            text="Pulsa '+ NUEVA RESERVA' para comenzar.",
+            text="Ve a Inicio y selecciona un hotel para reservar.",
             bg=C["main_bg"], fg=C["texto_light"],
             font=("Segoe UI", 9)
         ).pack(pady=(4, 0))
@@ -273,77 +266,113 @@ class FormularioReserva:
     porque tiene su propia lógica y estado.
     Separar responsabilidades = código más limpio.
     """
-    def __init__(self, ventana, app, callback_actualizar):
+    def __init__(self, ventana, app, callback_actualizar, hotel_prellenado=None):
         self.ventana = ventana
-        self.app     = app
-        
+        self.app = app
         self.callback_actualizar = callback_actualizar
-
+        self.hotel_prellenado = hotel_prellenado
         self._construir()
 
     def _construir(self):
         pad = tk.Frame(self.ventana, bg=C["main_bg"])
         pad.pack(fill="both", expand=True, padx=28, pady=24)
 
-        tk.Label(
-            pad,
-            text="Nueva Reserva",
-            bg=C["main_bg"], fg=C["texto_dark"],
-            font=("Segoe UI", 16, "bold")
-        ).pack(anchor="w", pady=(0, 20))
+        tk.Label(pad, text="Nueva Reserva",
+             bg=C["main_bg"], fg=C["texto_dark"],
+             font=("Segoe UI", 16, "bold")).pack(anchor="w", pady=(0, 20))
 
-        campos_config = [
-            ("Hotel",       "hotel",      ""),
-            ("Ciudad",      "ciudad",     ""),
-            ("Fecha",       "fecha",      "01 Ene, 2025"),
-            ("Huéspedes",   "huespedes",  "2 Adultos"),
-            ("Habitación",  "habitacion", "Habitación Estándar"),
-            ("Precio/noche","precio",     "100"),
-        ]
+        nombre_hotel = self.hotel_prellenado.get("nombre", "") if self.hotel_prellenado else ""
+        ciudad_hotel = self.hotel_prellenado.get("ciudad", "") if self.hotel_prellenado else ""
+        precio_hotel = self.hotel_prellenado.get("precio", "100") if self.hotel_prellenado else "100"
 
         self.vars = {}
 
-        for etiqueta, clave, default in campos_config:
-            self._campo(pad, etiqueta, clave, default)
+    # Hotel (readonly)
+        self._campo_readonly(pad, "Hotel", "hotel", nombre_hotel)
 
-        tk.Label(
-            pad,
-            text="Estado",
-            bg=C["main_bg"], fg=C["texto_mid"],
-            font=("Segoe UI", 9)
-        ).pack(anchor="w", pady=(8, 2))
+    # Ciudad (readonly)
+        self._campo_readonly(pad, "Ciudad", "ciudad", ciudad_hotel)
 
+    # Fecha con calendario
+        tk.Label(pad, text="Fecha",
+             bg=C["main_bg"], fg=C["texto_mid"],
+             font=("Segoe UI", 9)).pack(anchor="w", pady=(8, 2))
+
+        frame_fecha = tk.Frame(pad, bg=C["main_bg"])
+        frame_fecha.pack(fill="x")
+
+        self.vars["fecha"] = tk.StringVar(value="Seleccionar fecha")
+        tk.Entry(frame_fecha, textvariable=self.vars["fecha"],
+             font=("Segoe UI", 9), relief="solid", bd=1,
+             state="readonly", readonlybackground="#f0f0f0").pack(
+             side="left", fill="x", expand=True, ipady=4)
+
+        tk.Button(frame_fecha, text="📅", font=("Segoe UI", 10),
+              relief="flat", bg=C["naranja"], fg="white",
+              cursor="hand2", padx=6,
+              command=self._abrir_calendario).pack(side="left", padx=(4, 0))
+
+    # Huéspedes (Combobox)
+        tk.Label(pad, text="Huéspedes",
+             bg=C["main_bg"], fg=C["texto_mid"],
+             font=("Segoe UI", 9)).pack(anchor="w", pady=(8, 2))
+        self.vars["huespedes"] = tk.StringVar(value="1 Adulto")
+        ttk.Combobox(pad, textvariable=self.vars["huespedes"],
+                     values=["1 Adulto", "2 Adultos", "3 Adultos", "4 Adultos"],
+                 state="readonly", font=("Segoe UI", 9)).pack(
+                 fill="x", ipady=3)
+
+    # Habitación (Combobox)
+        tk.Label(pad, text="Habitación",
+             bg=C["main_bg"], fg=C["texto_mid"],
+             font=("Segoe UI", 9)).pack(anchor="w", pady=(8, 2))
+        self.vars["habitacion"] = tk.StringVar(value="Simple")
+        ttk.Combobox(pad, textvariable=self.vars["habitacion"],
+                 values=["Simple", "Doble", "Suite"],
+                 state="readonly", font=("Segoe UI", 9)).pack(
+                 fill="x", ipady=3)
+
+    # Precio (readonly)
+        self._campo_readonly(pad, "Precio/noche", "precio", precio_hotel)
+
+    # Estado
+        tk.Label(pad, text="Estado",
+             bg=C["main_bg"], fg=C["texto_mid"],
+             font=("Segoe UI", 9)).pack(anchor="w", pady=(8, 2))
         self.vars["estado"] = tk.StringVar(value="Confirmada")
-        ttk.Combobox(
-            pad,
-            textvariable=self.vars["estado"],
-            values=["Confirmada", "Pendiente", "Finalizado"],
-            state="readonly",
-            font=("Segoe UI", 9)
-        ).pack(fill="x", ipady=3, pady=(0, 16))
+        ttk.Combobox(pad, textvariable=self.vars["estado"],
+                 values=["Confirmada", "Pendiente"],
+                 state="readonly", font=("Segoe UI", 9)).pack(
+                 fill="x", ipady=3, pady=(0, 16))
 
-        
+    # Botones
         fila_btns = tk.Frame(pad, bg=C["main_bg"])
         fila_btns.pack(fill="x")
 
         boton_naranja(
-            fila_btns, "GUARDAR", self._guardar, ancho=14
+            fila_btns,
+            "Confirmar",
+            lambda: self._guardar(confirmar=True),
+            ancho=14
         ).pack(side="left")
 
-        tk.Label(
+        boton_naranja(
+            fila_btns,
+            "Guardar",
+            lambda: self._guardar(confirmar=False),
+            ancho=14
+        ).pack(side="left", padx=(8, 0))
+
+        lbl_cancelar = tk.Label(
             fila_btns,
             text="Cancelar",
             bg=C["main_bg"], fg=C["texto_light"],
-            font=("Segoe UI", 9),
-            cursor="hand2"
-        ).pack(side="left", padx=12)
-
-        fila_btns.winfo_children()[1].bind(
-            "<Button-1>", lambda e: self.ventana.destroy()
+            font=("Segoe UI", 9), cursor="hand2"
         )
+        lbl_cancelar.pack(side="left", padx=12)
+        lbl_cancelar.bind("<Button-1>", lambda e: self.ventana.destroy())
 
-    def _campo(self, padre, etiqueta, clave, default):
-        """Genera label + entry para cada campo del formulario."""
+    def _campo(self, padre, etiqueta, clave, default, readonly=False):
         tk.Label(
             padre,
             text=etiqueta,
@@ -353,29 +382,172 @@ class FormularioReserva:
 
         self.vars[clave] = tk.StringVar(value=default)
 
+        estado_entry = "readonly" if readonly else "normal"
         tk.Entry(
             padre,
             textvariable=self.vars[clave],
             font=("Segoe UI", 9),
-            relief="solid", bd=1
+            relief="solid", bd=1,
+            state=estado_entry,
+            readonlybackground="#f0f0f0"
         ).pack(fill="x", ipady=4)
 
-    def _guardar(self):
-        """Valida y guarda la nueva reserva."""
+    def _guardar(self, confirmar=False):
+        if confirmar:
+            self.vars["estado"].set("Confirmada")
+
         hotel  = self.vars["hotel"].get().strip()
         ciudad = self.vars["ciudad"].get().strip()
+        fecha  = self.vars["fecha"].get().strip()
 
-        if not hotel or not ciudad:
+        if not hotel or not ciudad or not fecha:
             messagebox.showwarning(
                 "Campos requeridos",
-                "Hotel y ciudad son obligatorios.",
+                "Hotel, ciudad y fecha son obligatorios.",
                 parent=self.ventana
             )
             return
 
-        nueva = {k: v.get().strip() for k, v in self.vars.items()}
+        # Validar duplicado: mismo hotel + misma fecha
+        reservas_existentes = leer_reservas()
+        for r in reservas_existentes:
+            if (r.get("hotel", "").lower() == hotel.lower() and
+                    r.get("fecha", "").lower() == fecha.lower()):
+                messagebox.showwarning(
+                    "Reserva duplicada",
+                    f"Ya tienes una reserva en {hotel} para esa fecha.",
+                    parent=self.ventana
+                )
+                return
 
+        nueva = {k: v.get().strip() for k, v in self.vars.items()}
         agregar_reserva(nueva)
 
-        self.ventana.destroy()          
-        self.callback_actualizar()      
+        estado_actual = self.vars["estado"].get()
+        if estado_actual == "Confirmada":
+            mensaje = f"Tu reserva en {hotel} fue confirmada correctamente."
+            titulo = "¡Reserva confirmada!"
+        else:
+            mensaje = f"Tu reserva en {hotel} fue guardada como pendiente."
+            titulo = "Reserva guardada"
+
+        messagebox.showinfo(
+            titulo,
+            mensaje,
+            parent=self.ventana
+        )
+
+        self.ventana.destroy()
+        self.callback_actualizar()
+
+    def _campo_readonly(self, padre, etiqueta, clave, valor):
+        tk.Label(padre, text=etiqueta,
+                bg=C["main_bg"], fg=C["texto_mid"],
+                font=("Segoe UI", 9)).pack(anchor="w", pady=(8, 2))
+        self.vars[clave] = tk.StringVar(value=valor)
+        tk.Entry(padre, textvariable=self.vars[clave],
+                font=("Segoe UI", 9), relief="solid", bd=1,
+                state="readonly", readonlybackground="#f0f0f0").pack(
+                fill="x", ipady=4)
+
+    def _abrir_calendario(self):
+        top = tk.Toplevel(self.ventana)
+        top.title("Seleccionar fecha")
+        top.geometry("300x280")
+        top.resizable(False, False)
+        top.configure(bg=C["main_bg"])
+        top.transient(self.ventana)
+        top.grab_set()
+
+        import datetime
+        hoy = datetime.date.today()
+        self._cal_anio = hoy.year
+        self._cal_mes = hoy.month
+        self._cal_top = top
+
+        self._frame_cal = tk.Frame(top, bg=C["main_bg"])
+        self._frame_cal.pack(fill="both", expand=True, padx=12, pady=12)
+        self._dibujar_calendario()
+
+    def _dibujar_calendario(self):
+        import datetime
+        for w in self._frame_cal.winfo_children():
+            w.destroy()
+
+        nombres_mes = ["","Enero","Febrero","Marzo","Abril","Mayo","Junio",
+                    "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
+
+        # Navegación
+        nav = tk.Frame(self._frame_cal, bg=C["main_bg"])
+        nav.pack(fill="x", pady=(0, 8))
+
+        tk.Button(nav, text="<", command=self._mes_anterior_cal,
+                relief="flat", bg=C["main_bg"], fg=C["texto_dark"],
+                font=("Segoe UI", 11), cursor="hand2").pack(side="left")
+        tk.Label(nav, text=f"{nombres_mes[self._cal_mes]} {self._cal_anio}",
+                bg=C["main_bg"], fg=C["texto_dark"],
+                font=("Segoe UI", 10, "bold")).pack(side="left", expand=True)
+        tk.Button(nav, text=">", command=self._mes_siguiente_cal,
+                relief="flat", bg=C["main_bg"], fg=C["texto_dark"],
+                font=("Segoe UI", 11), cursor="hand2").pack(side="right")
+
+        # Días semana
+        grid = tk.Frame(self._frame_cal, bg=C["main_bg"])
+        grid.pack()
+        for col, dia in enumerate(["Do","Lu","Ma","Mi","Ju","Vi","Sá"]):
+            tk.Label(grid, text=dia, font=("Segoe UI", 8),
+                    fg=C["texto_light"], bg=C["main_bg"],
+                    width=4).grid(row=0, column=col)
+
+        # Días del mes
+        import datetime
+        primer_dia = (datetime.date(self._cal_anio, self._cal_mes, 1).weekday() + 1) % 7
+        if self._cal_mes == 12:
+            dias_mes = 31
+        else:
+            dias_mes = (datetime.date(self._cal_anio, self._cal_mes + 1, 1)
+                        - datetime.timedelta(days=1)).day
+
+        hoy = datetime.date.today()
+        dia_num = 1
+        for fila in range(1, 7):
+            for col in range(7):
+                idx = (fila - 1) * 7 + col
+                if idx < primer_dia or dia_num > dias_mes:
+                    tk.Label(grid, text="", bg=C["main_bg"],
+                            width=4, height=2).grid(row=fila, column=col)
+                else:
+                    es_hoy = (dia_num == hoy.day and
+                            self._cal_mes == hoy.month and
+                            self._cal_anio == hoy.year)
+                    bg = C["naranja"] if es_hoy else C["main_bg"]
+                    fg = "white" if es_hoy else C["texto_dark"]
+                    btn = tk.Label(grid, text=str(dia_num),
+                                font=("Segoe UI", 9),
+                                bg=bg, fg=fg, width=4, height=2,
+                                cursor="hand2")
+                    btn.grid(row=fila, column=col)
+                    btn.bind("<Button-1>",
+                        lambda e, d=dia_num: self._seleccionar_dia(d))
+                    dia_num += 1
+
+    def _seleccionar_dia(self, dia):
+        nombres_mes = ["","Ene","Feb","Mar","Abr","May","Jun",
+                    "Jul","Ago","Sep","Oct","Nov","Dic"]
+        fecha_str = f"{dia:02d} {nombres_mes[self._cal_mes]}, {self._cal_anio}"
+        self.vars["fecha"].set(fecha_str)
+        self._cal_top.destroy()
+
+    def _mes_anterior_cal(self):
+        if self._cal_mes == 1:
+            self._cal_mes = 12; self._cal_anio -= 1
+        else:
+            self._cal_mes -= 1
+        self._dibujar_calendario()
+
+    def _mes_siguiente_cal(self):
+        if self._cal_mes == 12:
+            self._cal_mes = 1; self._cal_anio += 1
+        else:
+            self._cal_mes += 1
+        self._dibujar_calendario()
