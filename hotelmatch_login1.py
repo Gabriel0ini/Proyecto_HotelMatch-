@@ -671,7 +671,6 @@ class AplicacionHotelMatch(tk.Tk):
             nombre = entrada_usuario.get().strip()
             clave  = entrada_contrasena.get().strip()
             datos_admin = cargar_administrador()
-
             if nombre == datos_admin["usuario"] and \
                clave  == datos_admin["contrasena"]:
                    self.destroy()

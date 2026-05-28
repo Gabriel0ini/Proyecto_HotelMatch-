@@ -15,6 +15,18 @@ from paginas.configuracion  import PaginaConfiguracion
 USUARIO_ACTUAL = sys.argv[1] if len(sys.argv) > 1 else "Usuario"
 
 
+def obtener_iniciales(nombre_usuario):
+    nombre_usuario = nombre_usuario.strip()
+    if not nombre_usuario:
+        return "U"
+
+    partes = nombre_usuario.split()
+    if len(partes) == 1:
+        return partes[0][0].upper()
+
+    return (partes[0][0] + partes[-1][0]).upper()
+
+
 class HotelMatchApp(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -160,14 +172,15 @@ class HotelMatchApp(tk.Tk):
         perfil = tk.Frame(self.sidebar, bg=C["sidebar_bg"])
         perfil.pack(side="bottom", fill="x", padx=10, pady=12)
 
-        tk.Label(perfil, text="A", bg=C["naranja"], fg=C["blanco"],
+        iniciales = obtener_iniciales(USUARIO_ACTUAL)
+        tk.Label(perfil, text=iniciales, bg=C["naranja"], fg=C["blanco"],
                  font=("Segoe UI", 10, "bold"),
                  width=3, height=1).pack(side="left", padx=(0, 8))
 
         datos = tk.Frame(perfil, bg=C["sidebar_bg"])
         datos.pack(side="left")
 
-        tk.Label(datos, text=USUARIO_ACTUAL.upper()[:2], bg=C["sidebar_bg"],
+        tk.Label(datos, text=USUARIO_ACTUAL.upper(), bg=C["sidebar_bg"],
                  fg=C["blanco"], font=("Segoe UI", 9, "bold")).pack(anchor="w")
         tk.Label(datos, text="Premium Member", bg=C["sidebar_bg"],
                  fg=C["texto_light"], font=("Segoe UI", 7)).pack(anchor="w")
