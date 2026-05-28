@@ -1,8 +1,9 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
+import datetime
 from colores import C
 from widgets import boton_naranja, titulo_seccion, separador
-from datos   import leer_reservas, agregar_reserva, eliminar_reserva
+from datos   import leer_reservas, agregar_reserva, eliminar_reserva, actualizar_reserva
 
 
 class PaginaMisEstancias(tk.Frame):
@@ -223,6 +224,19 @@ class PaginaMisEstancias(tk.Frame):
             lambda e, rid=id_reserva: self._confirmar_eliminar(rid)
         )
 
+        btn_editar = tk.Label(
+            fila_bottom,
+            text="✎  Editar",
+            bg=C["blanco"], fg="#2a4d8f",
+            font=("Segoe UI", 8),
+            cursor="hand2"
+        )
+        btn_editar.pack(side="right", padx=(0, 10))
+        btn_editar.bind(
+            "<Button-1>",
+            lambda e, res=reserva: self._abrir_formulario(res)
+        )
+
 
     def _confirmar_eliminar(self, id_reserva):
         """
@@ -237,25 +251,26 @@ class PaginaMisEstancias(tk.Frame):
         if confirmado:
             eliminar_reserva(id_reserva)
             self._renderizar_lista()  
-    def _abrir_formulario(self):
+    def _abrir_formulario(self, reserva=None):
         """
-        Abre una ventana emergente (Toplevel) para crear reserva.
-        
-        ¿Por qué Toplevel y no una nueva página?
-        Porque es una acción modal — el usuario DEBE completarla
-        o cancelarla antes de seguir navegando.
-        Toplevel es el equivalente a un "dialog" en otros frameworks.
+        Abre una ventana emergente (Toplevel) para crear o editar una reserva.
         """
         ventana = tk.Toplevel(self)
-        ventana.title("Nueva Reserva")
-        ventana.geometry("420x480")
-        ventana.resizable(False, False)
+        titulo = "Editar Reserva" if reserva else "Nueva Reserva"
+        ventana.title(titulo)
+        ventana.geometry("440x660")
+        ventana.resizable(False, True)
         ventana.configure(bg=C["main_bg"])
 
-        ventana.transient(self.app) 
-        ventana.grab_set()          
+        ventana.transient(self.app)
+        ventana.grab_set()
 
-        FormularioReserva(ventana, self.app, self._renderizar_lista)
+        FormularioReserva(
+            ventana,
+            self.app,
+            self._renderizar_lista,
+            reserva_prellenada=reserva
+        )
 
 
 class FormularioReserva:
@@ -266,10 +281,11 @@ class FormularioReserva:
     porque tiene su propia lógica y estado.
     Separar responsabilidades = código más limpio.
     """
-    def __init__(self, ventana, app, callback_actualizar, hotel_prellenado=None):
+    def __init__(self, ventana, app, callback_actualizar, reserva_prellenada=None, hotel_prellenado=None):
         self.ventana = ventana
         self.app = app
         self.callback_actualizar = callback_actualizar
+        self.reserva_prellenada = reserva_prellenada
         self.hotel_prellenado = hotel_prellenado
         self._construir()
 
@@ -277,13 +293,22 @@ class FormularioReserva:
         pad = tk.Frame(self.ventana, bg=C["main_bg"])
         pad.pack(fill="both", expand=True, padx=28, pady=24)
 
-        tk.Label(pad, text="Nueva Reserva",
+        titulo_form = "Editar Reserva" if self.reserva_prellenada else "Nueva Reserva"
+        tk.Label(pad, text=titulo_form,
              bg=C["main_bg"], fg=C["texto_dark"],
              font=("Segoe UI", 16, "bold")).pack(anchor="w", pady=(0, 20))
 
-        nombre_hotel = self.hotel_prellenado.get("nombre", "") if self.hotel_prellenado else ""
-        ciudad_hotel = self.hotel_prellenado.get("ciudad", "") if self.hotel_prellenado else ""
-        precio_hotel = self.hotel_prellenado.get("precio", "100") if self.hotel_prellenado else "100"
+        nombre_hotel = ""
+        ciudad_hotel = ""
+        precio_hotel = "100"
+        if self.reserva_prellenada:
+            nombre_hotel = self.reserva_prellenada.get("hotel", "")
+            ciudad_hotel = self.reserva_prellenada.get("ciudad", "")
+            precio_hotel = self.reserva_prellenada.get("precio", "100")
+        elif self.hotel_prellenado:
+            nombre_hotel = self.hotel_prellenado.get("nombre", "")
+            ciudad_hotel = self.hotel_prellenado.get("ciudad", "")
+            precio_hotel = self.hotel_prellenado.get("precio", "100")
 
         self.vars = {}
 
@@ -293,30 +318,53 @@ class FormularioReserva:
     # Ciudad (readonly)
         self._campo_readonly(pad, "Ciudad", "ciudad", ciudad_hotel)
 
-    # Fecha con calendario
-        tk.Label(pad, text="Fecha",
+    # Fechas de entrada y salida
+        tk.Label(pad, text="Fechas",
              bg=C["main_bg"], fg=C["texto_mid"],
              font=("Segoe UI", 9)).pack(anchor="w", pady=(8, 2))
 
-        frame_fecha = tk.Frame(pad, bg=C["main_bg"])
-        frame_fecha.pack(fill="x")
+        frame_fechas = tk.Frame(pad, bg=C["main_bg"])
+        frame_fechas.pack(fill="x")
 
-        self.vars["fecha"] = tk.StringVar(value="Seleccionar fecha")
-        tk.Entry(frame_fecha, textvariable=self.vars["fecha"],
+        self.vars["check_in"] = tk.StringVar(value="Seleccionar fecha")
+        self.vars["check_out"] = tk.StringVar(value="Seleccionar fecha")
+        if self.reserva_prellenada:
+            self.vars["check_in"].set(self.reserva_prellenada.get("check_in", self.reserva_prellenada.get("fecha", "Seleccionar fecha").split(" - ")[0]))
+            self.vars["check_out"].set(self.reserva_prellenada.get("check_out", self.reserva_prellenada.get("fecha", "Seleccionar fecha").split(" - ")[-1]))
+
+        campo_entrada = tk.Frame(frame_fechas, bg=C["main_bg"])
+        campo_entrada.pack(side="left", fill="x", expand=True, padx=(0, 4))
+        tk.Label(campo_entrada, text="Entrada",
+             bg=C["main_bg"], fg=C["texto_light"],
+             font=("Segoe UI", 7, "bold")).pack(anchor="w")
+        tk.Entry(campo_entrada, textvariable=self.vars["check_in"],
              font=("Segoe UI", 9), relief="solid", bd=1,
              state="readonly", readonlybackground="#f0f0f0").pack(
              side="left", fill="x", expand=True, ipady=4)
-
-        tk.Button(frame_fecha, text="📅", font=("Segoe UI", 10),
+        tk.Button(campo_entrada, text="📅", font=("Segoe UI", 10),
               relief="flat", bg=C["naranja"], fg="white",
               cursor="hand2", padx=6,
-              command=self._abrir_calendario).pack(side="left", padx=(4, 0))
+              command=lambda: self._abrir_calendario("check_in")).pack(side="left", padx=(4, 0))
+
+        campo_salida = tk.Frame(frame_fechas, bg=C["main_bg"])
+        campo_salida.pack(side="left", fill="x", expand=True, padx=(4, 0))
+        tk.Label(campo_salida, text="Salida",
+             bg=C["main_bg"], fg=C["texto_light"],
+             font=("Segoe UI", 7, "bold")).pack(anchor="w")
+        tk.Entry(campo_salida, textvariable=self.vars["check_out"],
+             font=("Segoe UI", 9), relief="solid", bd=1,
+             state="readonly", readonlybackground="#f0f0f0").pack(
+             side="left", fill="x", expand=True, ipady=4)
+        tk.Button(campo_salida, text="📅", font=("Segoe UI", 10),
+              relief="flat", bg=C["naranja"], fg="white",
+              cursor="hand2", padx=6,
+              command=lambda: self._abrir_calendario("check_out")).pack(side="left", padx=(4, 0))
 
     # Huéspedes (Combobox)
         tk.Label(pad, text="Huéspedes",
              bg=C["main_bg"], fg=C["texto_mid"],
              font=("Segoe UI", 9)).pack(anchor="w", pady=(8, 2))
-        self.vars["huespedes"] = tk.StringVar(value="1 Adulto")
+        self.vars["huespedes"] = tk.StringVar(value=self.reserva_prellenada.get("huespedes", "1 Adulto") if self.reserva_prellenada else "1 Adulto")
         ttk.Combobox(pad, textvariable=self.vars["huespedes"],
                      values=["1 Adulto", "2 Adultos", "3 Adultos", "4 Adultos"],
                  state="readonly", font=("Segoe UI", 9)).pack(
@@ -326,7 +374,7 @@ class FormularioReserva:
         tk.Label(pad, text="Habitación",
              bg=C["main_bg"], fg=C["texto_mid"],
              font=("Segoe UI", 9)).pack(anchor="w", pady=(8, 2))
-        self.vars["habitacion"] = tk.StringVar(value="Simple")
+        self.vars["habitacion"] = tk.StringVar(value=self.reserva_prellenada.get("habitacion", "Simple") if self.reserva_prellenada else "Simple")
         ttk.Combobox(pad, textvariable=self.vars["habitacion"],
                  values=["Simple", "Doble", "Suite"],
                  state="readonly", font=("Segoe UI", 9)).pack(
@@ -339,7 +387,7 @@ class FormularioReserva:
         tk.Label(pad, text="Estado",
              bg=C["main_bg"], fg=C["texto_mid"],
              font=("Segoe UI", 9)).pack(anchor="w", pady=(8, 2))
-        self.vars["estado"] = tk.StringVar(value="Confirmada")
+        self.vars["estado"] = tk.StringVar(value=self.reserva_prellenada.get("estado", "Confirmada") if self.reserva_prellenada else "Confirmada")
         ttk.Combobox(pad, textvariable=self.vars["estado"],
                  values=["Confirmada", "Pendiente"],
                  state="readonly", font=("Segoe UI", 9)).pack(
@@ -408,40 +456,86 @@ class FormularioReserva:
         if confirmar:
             self.vars["estado"].set("Confirmada")
 
-        hotel  = self.vars["hotel"].get().strip()
+        hotel = self.vars["hotel"].get().strip()
         ciudad = self.vars["ciudad"].get().strip()
-        fecha  = self.vars["fecha"].get().strip()
+        check_in = self.vars["check_in"].get().strip()
+        check_out = self.vars["check_out"].get().strip()
 
-        if not hotel or not ciudad or not fecha:
+        if not hotel or not ciudad or not check_in or not check_out:
             messagebox.showwarning(
                 "Campos requeridos",
-                "Hotel, ciudad y fecha son obligatorios.",
+                "Hotel, ciudad, fecha de entrada y fecha de salida son obligatorios.",
                 parent=self.ventana
             )
             return
 
-        # Validar duplicado: mismo hotel + misma fecha
+        fecha_entrada = self._parse_fecha(check_in)
+        fecha_salida = self._parse_fecha(check_out)
+        if fecha_entrada is None or fecha_salida is None:
+            messagebox.showwarning(
+                "Fecha inválida",
+                "Selecciona fechas válidas para entrada y salida.",
+                parent=self.ventana
+            )
+            return
+
+        hoy = datetime.date.today()
+        if fecha_entrada < hoy or fecha_salida < hoy:
+            messagebox.showwarning(
+                "Fecha en el pasado",
+                "No puedes reservar fechas que ya hayan pasado.",
+                parent=self.ventana
+            )
+            return
+
+        if fecha_salida < fecha_entrada:
+            messagebox.showwarning(
+                "Rango inválido",
+                "La fecha de salida debe ser posterior a la fecha de entrada.",
+                parent=self.ventana
+            )
+            return
+
+        fecha = f"{check_in} - {check_out}"
+
         reservas_existentes = leer_reservas()
         for r in reservas_existentes:
+            if r.get("id") == str(self.reserva_prellenada.get("id", "")):
+                continue
             if (r.get("hotel", "").lower() == hotel.lower() and
                     r.get("fecha", "").lower() == fecha.lower()):
                 messagebox.showwarning(
                     "Reserva duplicada",
-                    f"Ya tienes una reserva en {hotel} para esa fecha.",
+                    f"Ya tienes una reserva en {hotel} para esas fechas.",
                     parent=self.ventana
                 )
                 return
 
-        nueva = {k: v.get().strip() for k, v in self.vars.items()}
-        agregar_reserva(nueva)
+        nueva = {
+            "hotel": hotel,
+            "ciudad": ciudad,
+            "fecha": fecha,
+            "check_in": check_in,
+            "check_out": check_out,
+            "huespedes": self.vars["huespedes"].get().strip(),
+            "habitacion": self.vars["habitacion"].get().strip(),
+            "precio": self.vars["precio"].get().strip(),
+            "estado": self.vars["estado"].get().strip(),
+        }
 
-        estado_actual = self.vars["estado"].get()
-        if estado_actual == "Confirmada":
-            mensaje = f"Tu reserva en {hotel} fue confirmada correctamente."
-            titulo = "¡Reserva confirmada!"
+        if self.reserva_prellenada and self.reserva_prellenada.get("id"):
+            actualizar_reserva(self.reserva_prellenada["id"], nueva)
+            mensaje = f"La reserva en {hotel} fue actualizada correctamente."
+            titulo = "Reserva actualizada"
         else:
-            mensaje = f"Tu reserva en {hotel} fue guardada como pendiente."
-            titulo = "Reserva guardada"
+            agregar_reserva(nueva)
+            estado_actual = self.vars["estado"].get()
+            if estado_actual == "Confirmada":
+                mensaje = f"Tu reserva en {hotel} fue confirmada correctamente."
+                titulo = "¡Reserva confirmada!"
+            else:
+                mensaje = f"Tu reserva en {hotel} fue guardada como pendiente."
+                titulo = "Reserva guardada"
 
         messagebox.showinfo(
             titulo,
@@ -462,7 +556,9 @@ class FormularioReserva:
                 state="readonly", readonlybackground="#f0f0f0").pack(
                 fill="x", ipady=4)
 
-    def _abrir_calendario(self):
+    def _abrir_calendario(self, campo):
+        self._campo_fecha_activa = campo
+
         top = tk.Toplevel(self.ventana)
         top.title("Seleccionar fecha")
         top.geometry("300x280")
@@ -547,7 +643,20 @@ class FormularioReserva:
         nombres_mes = ["","Ene","Feb","Mar","Abr","May","Jun",
                     "Jul","Ago","Sep","Oct","Nov","Dic"]
         fecha_str = f"{dia:02d} {nombres_mes[self._cal_mes]}, {self._cal_anio}"
-        self.vars["fecha"].set(fecha_str)
+        if getattr(self, '_campo_fecha_activa', None) == "check_in":
+            self.vars["check_in"].set(fecha_str)
+            try:
+                fecha_entrada = self._parse_fecha(fecha_str)
+                fecha_salida = self._parse_fecha(self.vars["check_out"].get())
+                if fecha_salida is None or fecha_salida <= fecha_entrada:
+                    siguiente = fecha_entrada + datetime.timedelta(days=1)
+                    self.vars["check_out"].set(
+                        f"{siguiente.day:02d} {nombres_mes[siguiente.month]}, {siguiente.year}"
+                    )
+            except Exception:
+                pass
+        else:
+            self.vars["check_out"].set(fecha_str)
         self._cal_top.destroy()
 
     def _mes_anterior_cal(self):
@@ -563,3 +672,31 @@ class FormularioReserva:
         else:
             self._cal_mes += 1
         self._dibujar_calendario()
+
+    def _parse_fecha(self, fecha_str):
+        fecha_str = fecha_str.strip()
+        if not fecha_str or fecha_str.lower().startswith("seleccionar"):
+            return None
+
+        meses = {
+            "Ene": "Jan", "Feb": "Feb", "Mar": "Mar", "Abr": "Apr",
+            "May": "May", "Jun": "Jun", "Jul": "Jul", "Ago": "Aug",
+            "Sep": "Sep", "Oct": "Oct", "Nov": "Nov", "Dic": "Dec"
+        }
+        for esp, eng in meses.items():
+            if esp in fecha_str:
+                fecha_str = fecha_str.replace(esp, eng)
+
+        formatos = [
+            "%Y-%m-%d",
+            "%d %b, %Y",
+            "%d %b %Y",
+            "%d %B, %Y",
+            "%d %B %Y"
+        ]
+        for fmt in formatos:
+            try:
+                return datetime.datetime.strptime(fecha_str, fmt).date()
+            except ValueError:
+                continue
+        return None

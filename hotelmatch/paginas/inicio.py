@@ -283,6 +283,6 @@ class PaginaInicio(tk.Frame):
         FormularioReserva(
             ventana,
             self.app,
-            al_guardar_reserva,  
+            al_guardar_reserva,
             hotel_prellenado=hotel
         )

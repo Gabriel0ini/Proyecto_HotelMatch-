@@ -103,7 +103,22 @@ def eliminar_reserva(id_reserva):
     reservas = leer_reservas()
     reservas = [r for r in reservas if r.get("id") != str(id_reserva)]
     guardar_reservas(reservas)
-   
+
+
+def actualizar_reserva(id_reserva, datos_actualizados):
+    """Actualiza la reserva existente con los nuevos datos."""
+    reservas = leer_reservas()
+    actualizado = False
+    for idx, reserva in enumerate(reservas):
+        if reserva.get("id") == str(id_reserva):
+            datos_actualizados["id"] = str(id_reserva)
+            reservas[idx] = datos_actualizados
+            actualizado = True
+            break
+    if actualizado:
+        guardar_reservas(reservas)
+    return actualizado
+
 
 def leer_favoritos():
     """

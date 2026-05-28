@@ -294,33 +294,52 @@ class PaginaReservas(tk.Frame):
         self._construir()
 
     def _construir(self):
-        header = tk.Frame(self, bg=C["main_bg"])
-        header.pack(fill="x", padx=28, pady=(24, 0))
-        etiqueta_titulo(header, "Reservas",
-                        "Calendario maestro de ocupación y gestión editorial.")
+        # 1. FORZAR LA LECTURA DE RESERVAS AL PRINCIPIO
+        # Cargamos los datos del archivo plano de inmediato en una variable de la clase
+        self.reservas = self._leer_reservas()
+
+        # Título de la sección
+        tk.Label(self, text="Calendario de Ocupación",
+                 font=("Segoe UI", 16, "bold"),
+                 fg=C["texto_dark"], bg=C["main_bg"]).pack(anchor="w", padx=28, pady=20)
 
         contenido = tk.Frame(self, bg=C["main_bg"])
-        contenido.pack(fill="both", expand=True, padx=28, pady=8)
+        contenido.pack(fill="both", expand=True, padx=28)
 
-        # Columna izquierda — estadísticas + calendario
+        # Columna izquierda — Calendario
         col_izq = tk.Frame(contenido, bg=C["main_bg"])
-        col_izq.pack(side="left", fill="both", expand=True, padx=(0, 12))
+        col_izq.pack(side="left", fill="both", expand=True, padx=(0, 20))
 
-        # Tarjetas resumen
-        frame_stats = tk.Frame(col_izq, bg=C["main_bg"])
-        frame_stats.pack(fill="x", pady=(0, 12))
+        # Barra del mes
+        barra_mes = tk.Frame(col_izq, bg=C["main_bg"])
+        barra_mes.pack(fill="x", pady=(0, 10))
 
-        for etiqueta, valor in [("TOTAL RESERVAS", "1,284"), ("TASA DE OCUPACIÓN", "92.4%")]:
-            c = tarjeta(frame_stats)
-            c.pack(side="left", padx=(0, 12), ipadx=20, ipady=10)
-            tk.Label(c, text=etiqueta, font=("Segoe UI", 8),
-                     fg=C["texto_light"], bg=C["card_bg"]).pack(anchor="w", padx=14, pady=(10, 0))
-            tk.Label(c, text=valor, font=("Segoe UI", 20, "bold"),
-                     fg=C["texto_dark"], bg=C["card_bg"]).pack(anchor="w", padx=14, pady=(0, 10))
+        self.lbl_mes = tk.Label(barra_mes, font=("Segoe UI", 12, "bold"),
+                                fg=C["texto_dark"], bg=C["main_bg"])
+        self.lbl_mes.pack(side="left")
 
-        # Calendario
+        btn_der = tk.Button(barra_mes, text="▶", font=("Segoe UI", 9),
+                            bg=C["card_bg"], fg=C["texto_dark"], relief="flat",
+                            command=lambda: self._cambiar_mes(1))
+        btn_der.pack(side="right", padx=2)
+
+        btn_izq = tk.Button(barra_mes, text="◀", font=("Segoe UI", 9),
+                            bg=C["card_bg"], fg=C["texto_dark"], relief="flat",
+                            command=lambda: self._cambiar_mes(-1))
+        btn_izq.pack(side="right", padx=2)
+
+        # Mapeamos los días para el calendario usando la lista que acabamos de leer
+        self.reservas_por_dia = self._mapear_reservas_por_dia(
+            self.reservas,
+            self.anio,
+            self.mes
+        )
+
+        # Construir contenedor del calendario físico
         self.frame_cal = tarjeta(col_izq)
         self.frame_cal.pack(fill="both", expand=True)
+        
+        # Dibujamos las celdas del calendario
         self._dibujar_calendario()
 
         # Columna derecha — próximas reservas
@@ -332,12 +351,16 @@ class PaginaReservas(tk.Frame):
                  font=("Segoe UI", 12, "bold"),
                  fg=C["texto_dark"], bg=C["main_bg"]).pack(anchor="w", pady=(0, 8))
 
-        for r in reservas:
-            self._tarjeta_reserva(col_der, r)
-
-        boton_naranja(col_der, "+ NUEVO REGISTRO",
-                      lambda: messagebox.showinfo("Nueva", "Formulario nueva reserva"), ancho=22).pack(pady=16)
-
+        # 2. RENDERIZAR LAS TARJETAS DERECHAS
+        # Si la lista tiene elementos leídos, dibujará cada tarjeta con su información real
+        if self.reservas:
+            for r in self.reservas:
+                self._tarjeta_reserva(col_der, r)
+        else:
+            # Mensaje decorativo en caso de que el archivo reservas.txt esté vacío
+            tk.Label(col_der, text="No hay reservas en reservas.txt",
+                     font=("Segoe UI", 9, "italic"),
+                     fg=C["texto_light"], bg=C["main_bg"]).pack(anchor="w", pady=10)
     def _dibujar_calendario(self):
         for w in self.frame_cal.winfo_children():
             w.destroy()
@@ -376,6 +399,7 @@ class PaginaReservas(tk.Frame):
                      width=5).grid(row=0, column=col, pady=4)
 
         # Días del mes
+# Días del mes (Reemplaza este fragmento interno dentro de tu función actual)
         primer_dia = datetime.date(self.anio, self.mes, 1).weekday()
         primer_dia = (primer_dia + 1) % 7  # ajuste DOM=0
         dias_mes = (datetime.date(self.anio, self.mes % 12 + 1, 1)
@@ -394,23 +418,30 @@ class PaginaReservas(tk.Frame):
                               self.mes == hoy.month and
                               self.anio == hoy.year)
                     reservado = self.reservas_por_dia.get(dia_num)
+                    
                     if reservado:
                         reserva = reservado[0]
                         color = reserva.get("color_hex", "#10B981")
+                        
+                        # CREACIÓN DE BOTÓN VISUAL: Muestra el número con el color único de fondo del hotel
                         btn = tk.Button(grid, text=str(dia_num),
-                                        font=("Segoe UI", 9, "bold" if es_hoy else "normal"),
+                                        font=("Segoe UI", 9, "bold"),
                                         bg=color, fg=C["blanco"],
-                                        activebackground=color,
+                                        activebackground=color, activeforeground=C["blanco"],
                                         relief="flat", width=5, height=2,
-                                        cursor="hand2",
+                                        cursor="hand2", bd=0,
                                         command=lambda d=dia_num: self._mostrar_detalle_dia(d))
-                        btn.grid(row=fila, column=col, padx=1, pady=1)
+                        btn.grid(row=fila, column=col, padx=2, pady=2)
+                        
+                        # Efecto visual: Resaltar ligeramente al pasar el mouse por encima
+                        btn.bind("<Enter>", lambda e, b=btn: b.config(relief="groove"))
+                        btn.bind("<Leave>", lambda e, b=btn: b.config(relief="flat"))
                     else:
                         bg = C["naranja"] if es_hoy else C["card_bg"]
                         fg = C["blanco"] if es_hoy else C["texto_dark"]
                         tk.Label(grid, text=str(dia_num),
                                  font=("Segoe UI", 9, "bold" if es_hoy else "normal"),
-                                 bg=bg, fg=fg, width=5, height=2).grid(row=fila, column=col)
+                                 bg=bg, fg=fg, width=5, height=2).grid(row=fila, column=col, padx=2, pady=2)
                     dia_num += 1
 
     def _mes_anterior(self):
@@ -421,25 +452,61 @@ class PaginaReservas(tk.Frame):
         self._dibujar_calendario()
 
     def _leer_reservas(self):
-        ruta = os.path.join(os.path.dirname(__file__), "reservas.txt")
-        reservas = []
+        ruta_root = os.path.join(os.path.dirname(__file__), "reservas.txt")
+        ruta_hotelmatch = os.path.join(
+            os.path.dirname(__file__), "hotelmatch", "data", "reservas.txt"
+        )
+        ruta = ruta_hotelmatch if os.path.exists(ruta_hotelmatch) else ruta_root
+
+        reservas_lista = []
         if not os.path.exists(ruta):
-            return reservas
+            return reservas_lista
+
         with open(ruta, "r", encoding="utf-8") as archivo:
             for linea in archivo:
                 linea = linea.strip()
                 if not linea:
                     continue
-                partes = [pieza.strip() for pieza in linea.split(",")]
-                if len(partes) != 8:
-                    continue
-                codigo, cliente, hotel_nombre, color_hex, check_in, check_out, monto, estado = partes
-                try:
-                    fecha_entrada = datetime.date.fromisoformat(check_in)
-                    fecha_salida = datetime.date.fromisoformat(check_out)
-                except ValueError:
-                    continue
-                reservas.append({
+
+                datos_reserva = {}
+                partes = linea.split("|")
+                for parte in partes:
+                    if "=" in parte:
+                        clave, valor = parte.split("=", 1)
+                        datos_reserva[clave.strip()] = valor.strip()
+
+                codigo = f"#RES-{datos_reserva.get('id', '000')}"
+                cliente = "Huésped Registrado"
+                hotel_nombre = datos_reserva.get("hotel", "Hotel Desconocido")
+                monto = datos_reserva.get("precio", "0")
+                estado = datos_reserva.get("estado", "Confirmada")
+
+                colores_hoteles = {
+                    "los tajibos": "#3b82f6",
+                    "gran hotel paris": "#2a2a4e",
+                    "skyline loft madrid": "#10b981"
+                }
+                color_hex = colores_hoteles.get(hotel_nombre.lower(), C["naranja"])
+
+                check_in_str = datos_reserva.get("fecha", "Seleccionar fecha")
+                if check_in_str == "Seleccionar fecha":
+                    id_num = int(datos_reserva.get('id', '1'))
+                    offset_dia = 5 + (id_num * 4) % 20
+                    fecha_entrada = datetime.date(self.anio, self.mes, offset_dia)
+                    fecha_salida = fecha_entrada + datetime.timedelta(days=2)
+                elif " - " in check_in_str:
+                    partes_fecha = check_in_str.split(" - ", 1)
+                    fecha_entrada = self._parse_fecha(partes_fecha[0])
+                    fecha_salida = self._parse_fecha(partes_fecha[1])
+                    if fecha_entrada is None or fecha_salida is None:
+                        continue
+                else:
+                    fecha_entrada = self._parse_fecha(check_in_str)
+                    if fecha_entrada is None:
+                        continue
+                    fecha_salida = fecha_entrada + datetime.timedelta(days=2)
+
+                reservas_lista.append({
                     "codigo": codigo,
                     "cliente": cliente,
                     "hotel_nombre": hotel_nombre,
@@ -449,7 +516,37 @@ class PaginaReservas(tk.Frame):
                     "monto": monto,
                     "estado": estado,
                 })
-        return reservas
+        return reservas_lista
+
+    def _parse_fecha(self, fecha_str):
+        fecha_str = fecha_str.strip()
+        if not fecha_str:
+            return None
+
+        meses = {
+            "Ene": "Jan", "Feb": "Feb", "Mar": "Mar", "Abr": "Apr",
+            "May": "May", "Jun": "Jun", "Jul": "Jul", "Ago": "Aug",
+            "Sep": "Sep", "Oct": "Oct", "Nov": "Nov", "Dic": "Dec"
+        }
+        for esp, eng in meses.items():
+            if esp in fecha_str:
+                fecha_str = fecha_str.replace(esp, eng)
+
+        formatos = [
+            "%Y-%m-%d",
+            "%d %b, %Y",
+            "%d %b %Y",
+            "%d %B, %Y",
+            "%d %B %Y"
+        ]
+
+        for fmt in formatos:
+            try:
+                return datetime.datetime.strptime(fecha_str, fmt).date()
+            except ValueError:
+                continue
+
+        return None
 
     def _mapear_reservas_por_dia(self, reservas, anio, mes):
         dias_veh = {}
@@ -526,25 +623,35 @@ class PaginaReservas(tk.Frame):
         c = tarjeta(padre)
         c.pack(fill="x", pady=5, ipadx=10, ipady=8)
 
+        # Nombre del Cliente leído del archivo txt
         tk.Label(c, text=r["cliente"],
                  font=("Segoe UI", 10, "bold"),
                  fg=C["texto_dark"], bg=C["card_bg"]).pack(anchor="w", padx=10, pady=(8, 0))
-        tk.Label(c, text=r["id_cliente"],
-                 font=("Segoe UI", 8),
+        
+        # Muestra el nombre del Hotel asignado
+        tk.Label(c, text=r["hotel_nombre"],
+                 font=("Segoe UI", 8, "bold"),
                  fg=C["texto_light"], bg=C["card_bg"]).pack(anchor="w", padx=10)
 
         fila = tk.Frame(c, bg=C["card_bg"])
         fila.pack(fill="x", padx=10, pady=2)
-        tk.Label(fila, text=f"Check-in: {r['checkin']}",
+        
+        # Formatear la fecha datetime.date para que se vea amigable (Ej: 12 Oct 2024)
+        fecha_amigable = r["check_in"].strftime("%d %b %Y") if isinstance(r["check_in"], datetime.date) else str(r["check_in"])
+        
+        tk.Label(fila, text=f"Entrada: {fecha_amigable}",
                  font=("Segoe UI", 8), fg=C["texto_light"],
                  bg=C["card_bg"]).pack(side="left")
-        tk.Label(fila, text=r["monto"],
+                 
+        # Precio o Monto total
+        tk.Label(fila, text=f"Bs{r['monto']}",
                  font=("Segoe UI", 9, "bold"),
                  fg=C["naranja"], bg=C["card_bg"]).pack(side="right")
 
-        color = C["verde"] if r["estado"] == "CONFIRMADA" else C["amarillo"]
-        chip_estado(c, r["estado"], color).pack(anchor="w", padx=10, pady=(0, 8))
-
+        # Estado visual de la reserva
+        estado_texto = r["estado"].upper()
+        color = C["verde"] if estado_texto == "CONFIRMADA" else C["amarillo"]
+        chip_estado(c, estado_texto, color).pack(anchor="w", padx=10, pady=(0, 8))
 # ─────────────────────────────────────────────
 #  PÁGINA: Ingresos
 # ─────────────────────────────────────────────

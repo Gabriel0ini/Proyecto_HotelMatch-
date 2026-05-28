@@ -1,1 +1,3 @@
-hotel=Los Tajibos|ciudad=Santa Cruz, Bolivia|fecha=Seleccionar fecha|huespedes=1 Adulto|habitacion=Simple|precio=100|estado=Confirmada|id=2
+hotel=Gran Hotel Paris|ciudad=La Paz, Bolivia|fecha=30 May, 2026 - 30 May, 2026|check_in=30 May, 2026|check_out=30 May, 2026|huespedes=2 Adultos|habitacion=Simple|precio=100|estado=Confirmada|id=3
+hotel=Gran Hotel Cochabamba|ciudad=Cochabamba, Bolivia|fecha=02 Jun, 2026 - 04 Jun, 2026|check_in=02 Jun, 2026|check_out=04 Jun, 2026|huespedes=3 Adultos|habitacion=Doble|precio=100|estado=Confirmada|id=4
+hotel=Los Tajibos|ciudad=Santa Cruz, Bolivia|fecha=29 May, 2026 - 30 May, 2026|check_in=29 May, 2026|check_out=30 May, 2026|huespedes=4 Adultos|habitacion=Simple|precio=100|estado=Confirmada|id=5
