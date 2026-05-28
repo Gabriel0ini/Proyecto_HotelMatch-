@@ -349,10 +349,26 @@ class FormularioReserva:
         fila_btns = tk.Frame(pad, bg=C["main_bg"])
         fila_btns.pack(fill="x")
 
-        boton_naranja(fila_btns, "GUARDAR", self._guardar, ancho=14).pack(side="left")
-        lbl_cancelar = tk.Label(fila_btns, text="Cancelar",
-                            bg=C["main_bg"], fg=C["texto_light"],
-                            font=("Segoe UI", 9), cursor="hand2")
+        boton_naranja(
+            fila_btns,
+            "Confirmar",
+            lambda: self._guardar(confirmar=True),
+            ancho=14
+        ).pack(side="left")
+
+        boton_naranja(
+            fila_btns,
+            "Guardar",
+            lambda: self._guardar(confirmar=False),
+            ancho=14
+        ).pack(side="left", padx=(8, 0))
+
+        lbl_cancelar = tk.Label(
+            fila_btns,
+            text="Cancelar",
+            bg=C["main_bg"], fg=C["texto_light"],
+            font=("Segoe UI", 9), cursor="hand2"
+        )
         lbl_cancelar.pack(side="left", padx=12)
         lbl_cancelar.bind("<Button-1>", lambda e: self.ventana.destroy())
 
@@ -376,7 +392,10 @@ class FormularioReserva:
             readonlybackground="#f0f0f0"
         ).pack(fill="x", ipady=4)
 
-    def _guardar(self):
+    def _guardar(self, confirmar=False):
+        if confirmar:
+            self.vars["estado"].set("Confirmada")
+
         hotel  = self.vars["hotel"].get().strip()
         ciudad = self.vars["ciudad"].get().strip()
         fecha  = self.vars["fecha"].get().strip()
@@ -390,7 +409,6 @@ class FormularioReserva:
             return
 
         # Validar duplicado: mismo hotel + misma fecha
-        from datos import leer_reservas
         reservas_existentes = leer_reservas()
         for r in reservas_existentes:
             if (r.get("hotel", "").lower() == hotel.lower() and
@@ -405,12 +423,23 @@ class FormularioReserva:
         nueva = {k: v.get().strip() for k, v in self.vars.items()}
         agregar_reserva(nueva)
 
-        messagebox.showinfo("¡Reserva confirmada!",
-            f"Tu reserva en {hotel} fue creada correctamente.",
-            parent=self.ventana)
+        estado_actual = self.vars["estado"].get()
+        if estado_actual == "Confirmada":
+            mensaje = f"Tu reserva en {hotel} fue confirmada correctamente."
+            titulo = "¡Reserva confirmada!"
+        else:
+            mensaje = f"Tu reserva en {hotel} fue guardada como pendiente."
+            titulo = "Reserva guardada"
+
+        messagebox.showinfo(
+            titulo,
+            mensaje,
+            parent=self.ventana
+        )
 
         self.ventana.destroy()
         self.callback_actualizar()
+
     def _campo_readonly(self, padre, etiqueta, clave, valor):
         tk.Label(padre, text=etiqueta,
                 bg=C["main_bg"], fg=C["texto_mid"],
