@@ -849,10 +849,10 @@ class PaginaMantenimiento(tk.Frame):
                  font=("Segoe UI", 11, "bold"),
                  fg=C["texto_dark"], bg=C["card_bg"]).pack(anchor="w", padx=16, pady=(12, 4))
 
-        cols = ["ASUNTO DEL REPORTE", "UBICACIÓN / ACTIVO", "PRIORIDAD", "ESTADO", "ASIGNADO", "ACCIONES"]
+        cols = ["ASUNTO DEL REPORTE", "HOTEL", "UBICACIÓN / ACTIVO", "PRIORIDAD", "ESTADO", "ASIGNADO", "ACCIONES"]
         cab = tk.Frame(tabla, bg="#f8f8fa")
         cab.pack(fill="x", padx=16)
-        anchos = [22, 22, 10, 12, 10, 8]
+        anchos = [18, 14, 18, 10, 12, 10, 8]
         for col, ancho in zip(cols, anchos):
             tk.Label(cab, text=col, font=("Segoe UI", 8, "bold"),
                      fg=C["texto_light"], bg="#f8f8fa",
@@ -875,11 +875,12 @@ class PaginaMantenimiento(tk.Frame):
         contenido = tk.Frame(fila, bg=C["card_bg"])
         contenido.pack(fill="x")
 
-        valores = [r["asunto"], r["ubicacion"], r["prioridad"], r["estado"],
-                   r["asignado"] if r["asignado"] else "Sin asignar", "···"]
-        colores  = [C["texto_dark"], C["texto_light"],
-                    cp.get(r["prioridad"], "#888"),
-                    ce.get(r["estado"], "#888"),
+        valores = [r.get("asunto", ""), r.get("hotel", "General"), r.get("ubicacion", ""),
+                   r.get("prioridad", ""), r.get("estado", ""),
+                   r["asignado"] if r.get("asignado") else "Sin asignar", "···"]
+        colores  = [C["texto_dark"], C["texto_dark"], C["texto_light"],
+                    cp.get(r.get("prioridad", ""), "#888"),
+                    ce.get(r.get("estado", ""), "#888"),
                     C["texto_dark"], C["texto_light"]]
 
         for val, color, ancho in zip(valores, colores, anchos):
@@ -896,6 +897,18 @@ class PaginaMantenimiento(tk.Frame):
         tk.Label(ventana, text="Nuevo Reporte",
                  font=("Segoe UI", 14, "bold"),
                  fg=C["texto_dark"], bg=C["main_bg"]).pack(pady=(16, 8))
+
+        hoteles = [h.get("nombre", "") for h in leer_hoteles() if h.get("nombre")]
+        if not hoteles:
+            hoteles = ["General"]
+
+        tk.Label(ventana, text="Hotel", font=("Segoe UI", 9),
+                 fg=C["texto_dark"], bg=C["main_bg"]).pack(anchor="w", padx=24)
+        hotel_var = tk.StringVar(value=hoteles[0])
+        combo_hotel = ttk.Combobox(ventana, textvariable=hotel_var,
+                                   values=hoteles, state="readonly",
+                                   font=("Segoe UI", 10))
+        combo_hotel.pack(fill="x", padx=24, pady=(0, 12), ipady=3)
 
         campos = {}
         for campo, placeholder in [("Asunto", "Describe el problema"),
@@ -918,6 +931,7 @@ class PaginaMantenimiento(tk.Frame):
 
         def guardar():
             reportes.append({
+                "hotel":     hotel_var.get(),
                 "asunto":    campos["Asunto"].get(),
                 "ubicacion": campos["Ubicación"].get(),
                 "prioridad": var_prioridad.get().upper(),
